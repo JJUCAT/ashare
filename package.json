@@ -1,0 +1,12 @@
+{
+  "name": "ashare",
+  "version": "1.0.0",
+  "description": "Ashare",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
