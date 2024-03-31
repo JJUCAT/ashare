@@ -4,6 +4,7 @@
 import os
 import csv
 from share.stock import *
+from share.prophet import *
 import pathlib
 
 if __name__ == '__main__':
@@ -25,13 +26,17 @@ if __name__ == '__main__':
   price = 20
   main_fund = 10.0
   force_rise = True 
-  stock.GetPriceStocksMoreDay(csv_path, price, main_fund, force_rise)
+  # stock.GetPriceStocksMoreDay(csv_path, price, main_fund, force_rise)
 
   #2 拉取股票近期数据
   days = 15
   csv_file = csv_path + 'price_stock_' + str(rang) + '.csv'
   save_path = csv_path + 'filtered_stocks/'
-  stock.GetRecentStocks(csv_file, save_path, days)
+  # stock.GetRecentStocks(csv_file, save_path, days)
+
+  #3 挑选股票
+  prophet = Prophet()
+  prophet.FilterBelowRecentAveragePriceStocks(save_path, 3, 5)
 
 
 

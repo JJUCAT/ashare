@@ -312,6 +312,7 @@ class Stock(object):
           # print("file:", file)
           # print("read path: %s, save path %s" % (read_path, save_path))
           self.GetPriceStocks(read_path, save_path, price, main_fund, force_rise)
+      break # 跳过 os.walk 对子目录 dirs 的遍历
 
 
   def GetRecentStocks(self, csv_file, save_path, days):
@@ -339,6 +340,9 @@ class Stock(object):
         continue
       pattern = r'^9' # '9'开头的股票代码不看
       if re.match(pattern, row[1]):
+        continue
+      pattern = r'^退市' # '退市'不看
+      if re.match(pattern, row[2]):
         continue
 
       code = row[1]
