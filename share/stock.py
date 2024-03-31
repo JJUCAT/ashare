@@ -2,6 +2,11 @@
 # -*- coding: UTF-8 -*-
 
 import akshare as ak
+import pathlib
+import csv
+import os
+import re
+
 
 
 class Stock(object):
@@ -143,6 +148,128 @@ class Stock(object):
     """    
     conceptfundhistory = ak.stock_concept_fund_flow_hist(symbol=concept)
     conceptfundhistory.to_csv(path, index=None, encoding='utf-8-sig')
+
+
+  def GetData(self, data_path):
+    """获取股票数据
+
+    Args:
+        data_path (str): 数据保存路径
+    """   
+    # A 股所有股票
+    stocks_path = data_path + 'stocks.csv'
+    file = pathlib.Path(stocks_path)
+    if not file.is_file():
+      self.GetStock(stocks_path)
+
+    # 东方财富热门股票排行
+    hot_rank_path = data_path + 'hot_rank.csv'
+    file = pathlib.Path(hot_rank_path)
+    if not file.is_file():
+      self.GetHotRank(hot_rank_path)
+
+    # 1，3，5，10 天资金流向排行
+    daynum_list = [1, 3, 5, 10]
+    for daynum in daynum_list:
+      fund_flow_path = data_path + 'fund_flow_' + str(daynum) + '.csv'
+      file = pathlib.Path(fund_flow_path)
+      if not file.is_file():
+        self.GetFundFlow(fund_flow_path, daynum)
+
+    # 大盘资金流向历史数据
+    market_fund_flow_path = data_path + 'market_fund_flow.csv'
+    file = pathlib.Path(market_fund_flow_path)
+    if not file.is_file():  
+      self.GetMarketFundFlow(market_fund_flow_path)
+
+    # 1，5，10 天板块资金流向排行
+    daynum_list = [1, 5, 10]
+    for daynum in daynum_list:
+      sector_fund_flow_path = data_path + 'sector_fund_flow_' + str(daynum) + '.csv'
+      file = pathlib.Path(sector_fund_flow_path)
+      if not file.is_file(): 
+        self.GetSectorFundFlow(sector_fund_flow_path, daynum)
+
+    # 主力净流入排行
+    main_fund_flow_path = data_path + 'main_fund_flow.csv'
+    file = pathlib.Path(main_fund_flow_path)
+    if not file.is_file():  
+      self.GetMainFundFlow(main_fund_flow_path)
+
+    # 行业流入排行
+    industry = '电源设备'
+    daynum_list = [1, 5, 10]
+    for daynum in daynum_list:
+      industry_fund_flow_path = data_path + 'industry_' + industry + '_fund_flow_' + str(daynum) + '.csv'
+      file = pathlib.Path(industry_fund_flow_path)
+      if not file.is_file():  
+        self.GetIndustryFundFlow(industry_fund_flow_path, industry, daynum)
+
+    # 行业资金流向历史
+    industry_fund_history_path = data_path + 'industry_' + industry + '_fund_histroy.csv'
+    file = pathlib.Path(industry_fund_history_path)
+    if not file.is_file():  
+      self.GetIndustryFundHistory(industry_fund_history_path, industry)
+
+    # 概念资金流向历史
+    concept = '锂电池'
+    concept_fund_history_path = data_path + 'concept_' + concept + '_fund_histroy.csv'
+    file = pathlib.Path(concept_fund_history_path)
+    if not file.is_file():  
+      self.GetConceptFundHistory(concept_fund_history_path, concept)
+
+
+  def GetPriceStocks(self, stocks_csv, price_stock_csv, price):
+    """筛选价格低于 price 的股票
+
+    Args:
+        stocks_csv (str): GetFundFlow 函数获取 csv 数据
+        price_stock_csv (str): 保存筛选后的股票 csv 数据
+        price (float): 筛选的股价上限
+    """    
+    csv_reader = csv.reader(open(stocks_csv))
+    num = 0
+
+    with open(price_stock_csv, "a", encoding="utf-8", newline="") as f:
+      csv_writer = csv.writer(f) # 基于文件对象构建 csv写入对象
+      for row in csv_reader:
+        # csv 中字符 '-' 表示空栅格
+        if row[3] == '-':
+          break
+
+        num += 1 # 第一行是项目标题
+        if num == 1:
+          csv_writer.writerow(row)
+          continue
+        
+        if float(row[3]) <= price :
+          csv_writer.writerow(row)
+      f.close()
+
+
+  def GetPriceStocksMoreDay(self, csv_path, price):
+    """获取价格低于 price 的多只股票多日数据
+
+    Args:
+        csv_path (str): csv 数据目录
+        price (float): 价格
+    """    
+    for root, dirs, files in os.walk(csv_path):
+      print("root:", root)
+      print("dirs:", dirs)
+      i = 0
+      for file in files:
+        pattern = r'^fund_flow_'
+        if re.match(pattern, file):
+          read_path = csv_path+file
+          tail = re.findall('(?<=fund_flow_).*$', file)
+          save_path = csv_path+'price_stock_'+tail[0]
+          print("file:", file)
+          print("read path: %s, save path %s" % (read_path, save_path))
+          self.GetPriceStocks(read_path, save_path, price)
+          i += 1
+
+
 
 
 
