@@ -6,6 +6,7 @@ import pathlib
 import csv
 import os
 import re
+import datetime
 
 
 
@@ -62,6 +63,17 @@ class Stock(object):
     """    
     hotfollow = ak.stock_hot_follow_xq()
     hotfollow.to_csv(path, index=None, encoding='utf-8-sig')
+
+
+  def GetStrongStock(self, path, date):
+    """东方财富强势股池
+
+    Args:
+        path (str): 文件保存路径
+        date (str): 查阅的日期
+    """    
+    strongstock = ak.stock_zt_pool_strong_em(date=date)
+    strongstock.to_csv(path, index=None, encoding='utf-8-sig')
 
 
   def GetFundFlow(self, path, day):
@@ -150,6 +162,23 @@ class Stock(object):
     conceptfundhistory.to_csv(path, index=None, encoding='utf-8-sig')
 
 
+  def GetStockHistory(self, save_path, code, days):
+    """获取股票历史数据，数据从日期远到日期近排序
+
+    Args:
+        save_path (str): 保存路径
+        code (str): 股票代码
+        days (int): 查询天数
+    """    
+    end = datetime.datetime.now()
+    start = end + datetime.timedelta(days=-days)
+    end_date = end.strftime("%Y%m%d") 
+    start_date = start.strftime("%Y%m%d") 
+    # print("start date: %s, end date %s" % (start_date, end_date))
+    stock_history = ak.stock_zh_a_hist(symbol=code, period="daily", start_date=start_date, end_date=end_date, adjust="")
+    stock_history.to_csv(save_path, index=None, encoding='utf-8-sig')
+
+
   def GetData(self, data_path):
     """获取股票数据
 
@@ -218,14 +247,23 @@ class Stock(object):
     if not file.is_file():  
       self.GetConceptFundHistory(concept_fund_history_path, concept)
 
+    # 强势股池
+    strong_date = '20240329'
+    strong_stock_path = data_path + 'strong_stock_' + strong_date + '.csv'
+    file = pathlib.Path(strong_stock_path)
+    if not file.is_file():  
+      self.GetStrongStock(strong_stock_path, strong_date)
 
-  def GetPriceStocks(self, stocks_csv, price_stock_csv, price):
+
+  def GetPriceStocks(self, stocks_csv, price_stock_csv, price, main_fund, force_rise=True):
     """筛选价格低于 price 的股票
 
     Args:
         stocks_csv (str): GetFundFlow 函数获取 csv 数据
         price_stock_csv (str): 保存筛选后的股票 csv 数据
         price (float): 筛选的股价上限
+        main_fund (float): 主力涨幅，百分比
+        force_rise (bool): 是否需要超大单和大单都是上涨的
     """    
     csv_reader = csv.reader(open(stocks_csv))
     num = 0
@@ -241,35 +279,72 @@ class Stock(object):
         if num == 1:
           csv_writer.writerow(row)
           continue
-        
-        if float(row[3]) <= price :
-          csv_writer.writerow(row)
+
+        if float(row[3]) <= price and float(row[6]) >= main_fund:
+          write = True
+          if force_rise == True:
+            if float(row[8]) < 0 or float(row[10]) < 0:
+              write = False
+          if write == True:
+            csv_writer.writerow(row)
+
       f.close()
 
 
-  def GetPriceStocksMoreDay(self, csv_path, price):
+  def GetPriceStocksMoreDay(self, csv_path, price, main_fund, force_rise):
     """获取价格低于 price 的多只股票多日数据
 
     Args:
         csv_path (str): csv 数据目录
         price (float): 价格
+        main_fund (float): 主力涨幅，百分比
+        force_rise (bool): 是否需要超大单和大单都是上涨的
     """    
     for root, dirs, files in os.walk(csv_path):
-      print("root:", root)
-      print("dirs:", dirs)
-      i = 0
+      # print("root:", root)
+      # print("dirs:", dirs)
       for file in files:
         pattern = r'^fund_flow_'
         if re.match(pattern, file):
           read_path = csv_path+file
           tail = re.findall('(?<=fund_flow_).*$', file)
           save_path = csv_path+'price_stock_'+tail[0]
-          print("file:", file)
-          print("read path: %s, save path %s" % (read_path, save_path))
-          self.GetPriceStocks(read_path, save_path, price)
-          i += 1
+          # print("file:", file)
+          # print("read path: %s, save path %s" % (read_path, save_path))
+          self.GetPriceStocks(read_path, save_path, price, main_fund, force_rise)
 
 
+  def GetRecentStocks(self, csv_file, save_path, days):
+    """获取 csv_path 文件内股票最近 days 天的数据
+
+    Args:
+        csv_file (str): 要读文件，格式由 GetPriceStocksMoreDay() 提供
+        save_path (str): 保存路径
+        days (int): 要查阅的天数
+    """    
+    csv_reader = csv.reader(open(csv_file))
+    num = 0
+
+    for row in csv_reader:
+      # csv 中字符 '-' 表示空栅格
+      if row[3] == '-':
+        break
+
+      num += 1 # 第一行是项目标题
+      if num == 1:
+        continue
+
+      pattern = r'^2' # '2'开头的股票代码不看
+      if re.match(pattern, row[1]):
+        continue
+      pattern = r'^9' # '9'开头的股票代码不看
+      if re.match(pattern, row[1]):
+        continue
+
+      code = row[1]
+      name = row[2]
+      stock_history_path = save_path + code + '_' + name + '_' + str(days) +  '.csv'
+      self.GetStockHistory(stock_history_path, code, days)
 
 
 
