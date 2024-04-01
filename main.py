@@ -6,6 +6,8 @@ import csv
 from share.stock import *
 from share.prophet import *
 import pathlib
+import shutil
+
 
 if __name__ == '__main__':
   print(' --------- 财源滚滚 --------- ')
@@ -15,24 +17,34 @@ if __name__ == '__main__':
   print('当前路径：%s' % (current_path))
   csv_path = current_path + '/data/csv/'
   print('数据路径：%s' % (csv_path))
+  filtered_path = csv_path + 'filtered_stocks/'
+  print('过滤后的数据路径：%s' % (filtered_path))
+
+  if os.path.exists(csv_path):
+    print('清空目录')
+    shutil.rmtree(csv_path)
+  if not os.path.exists(csv_path):
+    print('创建目录')
+    os.mkdir(csv_path)
+    os.mkdir(filtered_path)
+
 
   #0 拉取原始数据
   stock.GetData(csv_path);
 
   #1 在近期资金流动热门股票中筛选价格适宜的股票
-  rang = 3
-  stocks_csv = csv_path + 'fund_flow_' + str(rang) + '.csv'
-  price_stock_csv = csv_path + 'price_stock.csv'
   price = 20
   main_fund = 10.0
   force_rise = True 
-  # stock.GetPriceStocksMoreDay(csv_path, price, main_fund, force_rise)
+  stock.GetPriceStocksMoreDay(csv_path, price, main_fund, force_rise)
 
   #2 拉取股票近期数据
-  days = 15
-  csv_file = csv_path + 'price_stock_' + str(rang) + '.csv'
+  rang = 3 # 查看 3 天内的资金流向  
+  days = 30
+  fund_file = csv_path + 'price_stock_' + str(rang) + '.csv'
+  today_fund_file = csv_path + 'price_stock_1.csv'
   save_path = csv_path + 'filtered_stocks/'
-  # stock.GetRecentStocks(csv_file, save_path, days)
+  stock.GetRecentStocks(fund_file, today_fund_file, save_path, days)
 
   #3 挑选股票
   prophet = Prophet()

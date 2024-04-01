@@ -175,7 +175,7 @@ class Stock(object):
     end_date = end.strftime("%Y%m%d") 
     start_date = start.strftime("%Y%m%d") 
     # print("start date: %s, end date %s" % (start_date, end_date))
-    stock_history = ak.stock_zh_a_hist(symbol=code, period="daily", start_date=start_date, end_date=end_date, adjust="")
+    stock_history = ak.stock_zh_a_hist(symbol=code, period="daily", start_date=start_date, end_date=end_date, adjust="qfq")
     stock_history.to_csv(save_path, index=None, encoding='utf-8-sig')
 
 
@@ -186,16 +186,16 @@ class Stock(object):
         data_path (str): 数据保存路径
     """   
     # A 股所有股票
-    stocks_path = data_path + 'stocks.csv'
-    file = pathlib.Path(stocks_path)
-    if not file.is_file():
-      self.GetStock(stocks_path)
+    # stocks_path = data_path + 'stocks.csv'
+    # file = pathlib.Path(stocks_path)
+    # if not file.is_file():
+    #   self.GetStock(stocks_path)
 
     # 东方财富热门股票排行
-    hot_rank_path = data_path + 'hot_rank.csv'
-    file = pathlib.Path(hot_rank_path)
-    if not file.is_file():
-      self.GetHotRank(hot_rank_path)
+    # hot_rank_path = data_path + 'hot_rank.csv'
+    # file = pathlib.Path(hot_rank_path)
+    # if not file.is_file():
+    #   self.GetHotRank(hot_rank_path)
 
     # 1，3，5，10 天资金流向排行
     daynum_list = [1, 3, 5, 10]
@@ -206,53 +206,53 @@ class Stock(object):
         self.GetFundFlow(fund_flow_path, daynum)
 
     # 大盘资金流向历史数据
-    market_fund_flow_path = data_path + 'market_fund_flow.csv'
-    file = pathlib.Path(market_fund_flow_path)
-    if not file.is_file():  
-      self.GetMarketFundFlow(market_fund_flow_path)
+    # market_fund_flow_path = data_path + 'market_fund_flow.csv'
+    # file = pathlib.Path(market_fund_flow_path)
+    # if not file.is_file():  
+    #   self.GetMarketFundFlow(market_fund_flow_path)
 
     # 1，5，10 天板块资金流向排行
-    daynum_list = [1, 5, 10]
-    for daynum in daynum_list:
-      sector_fund_flow_path = data_path + 'sector_fund_flow_' + str(daynum) + '.csv'
-      file = pathlib.Path(sector_fund_flow_path)
-      if not file.is_file(): 
-        self.GetSectorFundFlow(sector_fund_flow_path, daynum)
+    # daynum_list = [1, 5, 10]
+    # for daynum in daynum_list:
+    #   sector_fund_flow_path = data_path + 'sector_fund_flow_' + str(daynum) + '.csv'
+    #   file = pathlib.Path(sector_fund_flow_path)
+    #   if not file.is_file(): 
+    #     self.GetSectorFundFlow(sector_fund_flow_path, daynum)
 
     # 主力净流入排行
-    main_fund_flow_path = data_path + 'main_fund_flow.csv'
-    file = pathlib.Path(main_fund_flow_path)
-    if not file.is_file():  
-      self.GetMainFundFlow(main_fund_flow_path)
+    # main_fund_flow_path = data_path + 'main_fund_flow.csv'
+    # file = pathlib.Path(main_fund_flow_path)
+    # if not file.is_file():  
+    #   self.GetMainFundFlow(main_fund_flow_path)
 
     # 行业流入排行
-    industry = '电源设备'
-    daynum_list = [1, 5, 10]
-    for daynum in daynum_list:
-      industry_fund_flow_path = data_path + 'industry_' + industry + '_fund_flow_' + str(daynum) + '.csv'
-      file = pathlib.Path(industry_fund_flow_path)
-      if not file.is_file():  
-        self.GetIndustryFundFlow(industry_fund_flow_path, industry, daynum)
+    # industry = '电源设备'
+    # daynum_list = [1, 5, 10]
+    # for daynum in daynum_list:
+    #   industry_fund_flow_path = data_path + 'industry_' + industry + '_fund_flow_' + str(daynum) + '.csv'
+    #   file = pathlib.Path(industry_fund_flow_path)
+    #   if not file.is_file():  
+    #     self.GetIndustryFundFlow(industry_fund_flow_path, industry, daynum)
 
     # 行业资金流向历史
-    industry_fund_history_path = data_path + 'industry_' + industry + '_fund_histroy.csv'
-    file = pathlib.Path(industry_fund_history_path)
-    if not file.is_file():  
-      self.GetIndustryFundHistory(industry_fund_history_path, industry)
+    # industry_fund_history_path = data_path + 'industry_' + industry + '_fund_histroy.csv'
+    # file = pathlib.Path(industry_fund_history_path)
+    # if not file.is_file():  
+    #   self.GetIndustryFundHistory(industry_fund_history_path, industry)
 
     # 概念资金流向历史
-    concept = '锂电池'
-    concept_fund_history_path = data_path + 'concept_' + concept + '_fund_histroy.csv'
-    file = pathlib.Path(concept_fund_history_path)
-    if not file.is_file():  
-      self.GetConceptFundHistory(concept_fund_history_path, concept)
+    # concept = '锂电池'
+    # concept_fund_history_path = data_path + 'concept_' + concept + '_fund_histroy.csv'
+    # file = pathlib.Path(concept_fund_history_path)
+    # if not file.is_file():  
+    #   self.GetConceptFundHistory(concept_fund_history_path, concept)
 
-    # 强势股池
-    strong_date = '20240329'
-    strong_stock_path = data_path + 'strong_stock_' + strong_date + '.csv'
-    file = pathlib.Path(strong_stock_path)
-    if not file.is_file():  
-      self.GetStrongStock(strong_stock_path, strong_date)
+    # # 强势股池
+    # strong_date = '20240329'
+    # strong_stock_path = data_path + 'strong_stock_' + strong_date + '.csv'
+    # file = pathlib.Path(strong_stock_path)
+    # if not file.is_file():  
+    #   self.GetStrongStock(strong_stock_path, strong_date)
 
 
   def GetPriceStocks(self, stocks_csv, price_stock_csv, price, main_fund, force_rise=True):
@@ -315,11 +315,12 @@ class Stock(object):
       break # 跳过 os.walk 对子目录 dirs 的遍历
 
 
-  def GetRecentStocks(self, csv_file, save_path, days):
+  def GetRecentStocks(self, csv_file, today_fund_file, save_path, days):
     """获取 csv_path 文件内股票最近 days 天的数据
 
     Args:
         csv_file (str): 要读文件，格式由 GetPriceStocksMoreDay() 提供
+        today_fund_file (str): 今日资金流向文件，格式由 GetPriceStocksMoreDay() 提供
         save_path (str): 保存路径
         days (int): 要查阅的天数
     """    
@@ -345,10 +346,18 @@ class Stock(object):
       if re.match(pattern, row[2]):
         continue
 
-      code = row[1]
-      name = row[2]
-      stock_history_path = save_path + code + '_' + name + '_' + str(days) +  '.csv'
-      self.GetStockHistory(stock_history_path, code, days)
+      code_index = 1
+      name_index = 2
+      main_fund_index = 6
+      super_fund_index = 8
+      large_fund_index = 10
+      today_csv_reader = csv.reader(open(today_fund_file))
+      for r in today_csv_reader:
+        if r[code_index] == row[code_index] and float(r[large_fund_index]) > 0 and float(r[super_fund_index]) > 0:
+          code = row[code_index]      
+          name = row[name_index]
+          stock_history_path = save_path + code + '_' + name + '.csv'
+          self.GetStockHistory(stock_history_path, code, days)
 
 
 

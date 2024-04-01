@@ -55,9 +55,8 @@ class Prophet(object):
     average_min_price = min_sum / average_min
     average_max_price = max_sum / average_max
     if new_price <= average_min_price and new_price <= average_max_price:
-      print("new price: %f, average[%d] price: %f, average[%d] price: %f" %
-            (new_price, average_min, average_min_price, average_max, average_max_price))      
-      print("Is Below Recent Price.")
+      # print("new price: %f, average[%d] price: %f, average[%d] price: %f" %
+      #       (new_price, average_min, average_min_price, average_max, average_max_price))      
       rise = True
 
     return rise
@@ -81,7 +80,7 @@ class Prophet(object):
         if self.IsBelowRecentAveragePrice(root+file, average_min, average_max):
           code = file[0:6]
           stocks_code.append(code)
-          print("code %s is below recent price." % (code))
+          print("%s is below recent price." % (file))
       break # 跳过 os.walk 对子目录 dirs 的遍历
     print("total %d stocks are below recent price." % (len(stocks_code)))
     return stocks_code
