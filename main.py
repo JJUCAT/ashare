@@ -5,6 +5,7 @@ import os
 import csv
 from share.stock import *
 from share.prophet import *
+from share.mail import *
 import pathlib
 import shutil
 
@@ -19,6 +20,15 @@ if __name__ == '__main__':
   print('数据路径：%s' % (csv_path))
   filtered_path = csv_path + 'filtered_stocks/'
   print('过滤后的数据路径：%s' % (filtered_path))
+
+  mail_host = 'smtp.163.com'
+  mail_user = '17688010148'
+  mail_sender = 'lmr2887@163.com'
+  mail_pass = 'CHLURCFITAQCLOKO'
+  mail = Mail(mail_host, mail_user, mail_sender, mail_pass)
+  mail.SetReceiver(mail_sender)
+  mail.Send('hollo, smtp.', 'empty')
+  exit(0)
 
   if os.path.exists(csv_path):
     print('清空目录')
