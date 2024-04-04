@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.9
 # -*- coding: UTF-8 -*-
 
 import akshare as ak
@@ -179,6 +179,28 @@ class Stock(object):
     stock_history.to_csv(save_path, index=None, encoding='utf-8-sig')
 
 
+  def GetBigFund(self, path):
+    """大单资金流向，即时
+
+    Args:
+        path (str): 文件保存路径
+    """    
+    bigdealfund = ak.stock_fund_flow_big_deal()
+    bigdealfund.to_csv(path, index=None, encoding='utf-8-sig')
+
+
+  def GetIndividualFund(self, path, code, market):
+    """个股资金流向
+
+    Args:
+        path (str): 保存路径
+        code (str): 股票代码
+        market (str): 交易所 @'sh'：上海交易所，@'sz'：深圳交易所，@'bj'：北京交易所
+    """    
+    individualfund = ak.stock_individual_fund_flow(stock=code, market=market)
+    individualfund.to_csv(path, index=None, encoding='utf-8-sig')
+
+
   def GetData(self, data_path):
     """获取股票数据
 
@@ -206,10 +228,10 @@ class Stock(object):
         self.GetFundFlow(fund_flow_path, daynum)
 
     # 大盘资金流向历史数据
-    # market_fund_flow_path = data_path + 'market_fund_flow.csv'
-    # file = pathlib.Path(market_fund_flow_path)
-    # if not file.is_file():  
-    #   self.GetMarketFundFlow(market_fund_flow_path)
+    market_fund_flow_path = data_path + 'market_fund_flow.csv'
+    file = pathlib.Path(market_fund_flow_path)
+    if not file.is_file():  
+      self.GetMarketFundFlow(market_fund_flow_path)
 
     # 1，5，10 天板块资金流向排行
     # daynum_list = [1, 5, 10]

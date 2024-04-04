@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.9
 # -*- coding: UTF-8 -*-
 
 import smtplib
@@ -56,8 +56,12 @@ class Mail(object):
       print('error',e)
 
 class LMRMail(Mail):
+  """继承 mail 类，定制只用 lmr 邮箱发送邮件
 
-  def __init__(self):
+  Args:
+      Mail (Mail): Mail 类
+  """  
+  def __init__(self):  
     mail_host = 'smtp.163.com'
     mail_user = '17688010148'
     mail_sender = 'lmr2887@163.com'
