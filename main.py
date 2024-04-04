@@ -21,13 +21,8 @@ if __name__ == '__main__':
   filtered_path = csv_path + 'filtered_stocks/'
   print('过滤后的数据路径：%s' % (filtered_path))
 
-  mail_host = 'smtp.163.com'
-  mail_user = '17688010148'
-  mail_sender = 'lmr2887@163.com'
-  mail_pass = 'CHLURCFITAQCLOKO'
-  mail = Mail(mail_host, mail_user, mail_sender, mail_pass)
-  mail.SetReceiver(mail_sender)
-  mail.Send('hollo, smtp.', 'empty')
+  lmrmail = LMRMail()
+  lmrmail.Send('hollo, lmr.', 'empty')
   exit(0)
 
   if os.path.exists(csv_path):

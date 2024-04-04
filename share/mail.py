@@ -55,4 +55,17 @@ class Mail(object):
     except smtplib.SMTPException as e:
       print('error',e)
 
+class LMRMail(Mail):
+
+  def __init__(self):
+    mail_host = 'smtp.163.com'
+    mail_user = '17688010148'
+    mail_sender = 'lmr2887@163.com'
+    mail_pass = 'CHLURCFITAQCLOKO'
+    # 通过 super() 调用父类方法
+    super().__init__(mail_host, mail_user, mail_sender, mail_pass)
+    super().SetReceiver(mail_sender)
+
+  def Send(self, Message, File):
+    super().Send(Message, File)
 
