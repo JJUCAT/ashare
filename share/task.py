@@ -23,17 +23,17 @@ def Task0():
   data_path = base_path + '/data/'
   csv_path = data_path + '/csv/'
   filtered_path = csv_path + 'filtered_stocks/'  
-  print('数据保存路径：%s, csv 路径：%s, 过滤后的数据路径：%s' %
+  print('数据保存路径:%s\ncsv 路径:%s\n过滤后的数据路径:%s' %
         (base_path, csv_path, filtered_path))
 
-  if os.path.exists(data_path):
-    print('清空目录')
-    shutil.rmtree(data_path)
   if not os.path.exists(data_path):
-    print('创建目录')
+    print('创建数据目录')
     os.mkdir(data_path)
-    os.mkdir(csv_path)
-    os.mkdir(filtered_path)
+  if os.path.exists(csv_path):
+    print('清空目录')
+    shutil.rmtree(csv_path)
+  os.mkdir(csv_path)
+  os.mkdir(filtered_path)
 
 
   #0 拉取原始数据
@@ -55,19 +55,26 @@ def Task0():
   stock.GetRecentStocks(fund_file, today_fund_file, save_path, days)
 
   #3 挑选股票
-  average_day = 3
+  average_day = 5
   total_day = 30
   prophet = Prophet()
-  stocks_code = prophet.FilterBelowRecentAveragePriceStocks(save_path, average_day, total_day)
+  underestimate_stocks = prophet.FilterUnderestimate(save_path, average_day, total_day)
+  bottomout_stocks = prophet.FilterBottomOut(save_path, average_day, total_day)
 
   #4 发送邮件
-  if len(stocks_code) > 0:
-    now = time.time()
-    current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
-    msg = current + '\n' + "推荐股票：" + '\n'
-    msg += reduce(lambda x, y: x+','+y, stocks_code)
-    lmrmail = LMRMail()
-    lmrmail.Send('hollo, lmr.', 'empty')
+  now = time.time()
+  current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+  msg = current + '\n'
+  if len(underestimate_stocks) > 0:
+    msg += msg + "低估股票：" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', underestimate_stocks)
+    msg += '\n'
+  if len(bottomout_stocks) > 0:
+    msg += msg + "反弹股票：" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', bottomout_stocks)
+    msg += '\n'
+  lmrmail = LMRMail()
+  lmrmail.Send(msg, 'empty')
 
 
 
@@ -76,9 +83,9 @@ def TimerTask():
   """  
 
   # 设置定时任务
-  schedule.every().day.at("12:00").do(Task0)
+  schedule.every().day.at("14:25").do(Task0)
   schedule.every().day.at("15:00").do(Task0)
-  schedule.every().day.at("00:16").do(Task0)
+  schedule.every().day.at("18:00").do(Task0)
 
   while True:
     schedule.run_pending() # 运行所有可以运行的任务

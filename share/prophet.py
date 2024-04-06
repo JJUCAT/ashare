@@ -15,14 +15,15 @@ class Prophet(object):
   def __init__(self):
     print('Prophet init.')
 
-  def IsBelowRecentAveragePrice(self, file, average, rang):
+  def IsAveragePriceAnalysis(self, file, average, rang, ave_trend, cur_position):
     """判断股票是否低于最近的平均值，文件数据是按日期从远到近排列，需要反向遍历！
 
     Args:
         file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
         average (int): 平均价格天数
         rang (int): 计算天数
-
+        ave_trend (int): @-1:下降; @1:上升;
+        cur_position (int): @-1:当前价格低于最近平均价格; @1:当前价格高于最近平均价格
     Returns:
         bool: 股票最新价格是否低于最近平均值
     """    
@@ -54,32 +55,34 @@ class Prophet(object):
       ave = ave / k
       average_price_list.append(ave)
 
-    # 最新价格 < 最近的平均价格
-    isBelowAvePrice = False
-    if average_price_list[0] > float(revr_list[0][2]):
-      isBelowAvePrice = True
+    # 判断最近价格在最近平均值上下
+    isPositionCondOk = False    
+    price_delta = float(revr_list[0][2]) - average_price_list[0]
+    if cur_position * price_delta > 0:
+      isPositionCondOk = True
 
     # 判断平均价格趋势
     continue_count = 0
-    rise_count = 2
-    isRecentlyAvePriceRise = False
+    rise_count = 3
+    isAvePriceTrendCondOk = False
     for i in range(len(average_price_list)):
       if i == len(average_price_list)-2:
         break
-      if average_price_list[i] >= average_price_list[i+1]:
+      step = average_price_list[i] - average_price_list[i+1]
+      if step * ave_trend > 0:
         continue_count += 1
         if continue_count >= rise_count:
-          isRecentlyAvePriceRise = True           
+          isAvePriceTrendCondOk = True           
       else:
         break
 
-    rise = False
-    if isRecentlyAvePriceRise and isBelowAvePrice:
-      rise = True
-    return rise
+    ok = False
+    if isPositionCondOk and isAvePriceTrendCondOk:
+      ok = True
+    return ok
 
 
-  def FilterBelowRecentAveragePriceStocks(self, data_path, average, rang):
+  def FilterUnderestimate(self, data_path, average, rang):
     """筛选出 data_path 中价格低于最近平均值的股票
 
     Args:
@@ -94,10 +97,34 @@ class Prophet(object):
 
     for root, dirs, files in os.walk(data_path):
       for file in files:
-        if self.IsBelowRecentAveragePrice(root+file, average, rang):
+        if self.IsAveragePriceAnalysis(root+file, average, rang, 1, -1):
           code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
           stocks_code.append(code)
-          print("%s is below recent price." % (file))
+          # print("%s is below recent price." % (code))
       break # 跳过 os.walk 对子目录 dirs 的遍历
-    print("total %d stocks are below recent price." % (len(stocks_code)))
+    print("共有 %d 支股票可能处于低估值状态。" % (len(stocks_code)))
+    return stocks_code
+
+
+  def FilterBottomOut(self, data_path, average, rang):
+    """筛选出 data_path 中触底反弹的股票
+
+    Args:
+        data_path (str): 数据目录
+        average (int): 平均价格天数
+        rang (int): 计算天数
+
+    Returns:
+        list: 股票代码列表
+    """    
+    stocks_code = []
+
+    for root, dirs, files in os.walk(data_path):
+      for file in files:
+        if self.IsAveragePriceAnalysis(root+file, average, rang, -1, 1):
+          code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
+          stocks_code.append(code)
+          # print("%s is below recent price." % (code))
+      break # 跳过 os.walk 对子目录 dirs 的遍历
+    print("共有 %d 支股票可能触底反弹。" % (len(stocks_code)))
     return stocks_code

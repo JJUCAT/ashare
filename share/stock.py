@@ -34,6 +34,22 @@ class Stock(object):
     hotrank = ak.stock_hot_rank_em()
     hotrank.to_csv(path, index=None, encoding='utf-8-sig')
 
+  def GetMarket(self, code):
+    """根据股票代码获取交易所
+
+    Args:
+        code (str): 股票代码
+
+    Returns:
+        str: 交易所代号 @'sh'：上海交易所，@'sz'：深圳交易所，@'bj'：北京交易所
+    """    
+    market = 'bj'
+    header = code[0:3]
+    if header == '600' or header == '601' or header == '603' or header == '688':
+      market = 'sh'
+    elif header == '000' or header == '001' or header == '003' or header == '300':
+      market = 'sz'
+    return market
 
   def GetHotUp(self, path):
     """东方财富飙升榜，没用
@@ -189,14 +205,14 @@ class Stock(object):
     bigdealfund.to_csv(path, index=None, encoding='utf-8-sig')
 
 
-  def GetIndividualFund(self, path, code, market):
+  def GetIndividualFund(self, path, code):
     """个股资金流向
 
     Args:
         path (str): 保存路径
         code (str): 股票代码
-        market (str): 交易所 @'sh'：上海交易所，@'sz'：深圳交易所，@'bj'：北京交易所
     """    
+    market = self.GetMarket(market)
     individualfund = ak.stock_individual_fund_flow(stock=code, market=market)
     individualfund.to_csv(path, index=None, encoding='utf-8-sig')
 
