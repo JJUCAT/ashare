@@ -397,5 +397,3 @@ class Stock(object):
           stock_history_path = save_path + code + '_' + name + '.csv'
           self.GetStockHistory(stock_history_path, code, days)
 
-
-

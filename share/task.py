@@ -22,9 +22,12 @@ def Task0():
   base_path = '/home/lmr/ws/ashare/'
   data_path = base_path + '/data/'
   csv_path = data_path + '/csv/'
-  filtered_path = csv_path + 'filtered_stocks/'  
+  reasonable_price_stocks_dir = 'reasonable_price_stocks/'
+  potential_stocks_dir = 'potential_stocks/'
+  price_filtered_path = csv_path + reasonable_price_stocks_dir  
+  potential_filtered_path = csv_path + potential_stocks_dir
   print('数据保存路径:%s\ncsv 路径:%s\n过滤后的数据路径:%s' %
-        (base_path, csv_path, filtered_path))
+        (base_path, csv_path, price_filtered_path))
 
   if not os.path.exists(data_path):
     print('创建数据目录')
@@ -33,8 +36,8 @@ def Task0():
     print('清空目录')
     shutil.rmtree(csv_path)
   os.mkdir(csv_path)
-  os.mkdir(filtered_path)
-
+  os.mkdir(price_filtered_path)
+  os.mkdir(potential_filtered_path)
 
   #0 拉取原始数据
   stock = Stock()
@@ -51,7 +54,7 @@ def Task0():
   days = 40
   fund_file = csv_path + 'price_stock_' + str(rang) + '.csv'
   today_fund_file = csv_path + 'price_stock_1.csv'
-  save_path = csv_path + 'filtered_stocks/'
+  save_path = csv_path + reasonable_price_stocks_dir
   stock.GetRecentStocks(fund_file, today_fund_file, save_path, days)
 
   #3 挑选股票
@@ -60,19 +63,23 @@ def Task0():
   prophet = Prophet()
   underestimate_stocks = prophet.FilterUnderestimate(save_path, average_day, total_day)
   bottomout_stocks = prophet.FilterBottomOut(save_path, average_day, total_day)
-
+  potential_stocks = prophet.FilterPotential(save_path, average_day, total_day, 0.05)
   #4 发送邮件
   now = time.time()
   current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
   msg = current + '\n'
   if len(underestimate_stocks) > 0:
-    msg += msg + "低估股票：" + '\n'
+    msg += "均价上涨，新价较低的低估股票：" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', underestimate_stocks)
-    msg += '\n'
+  msg += '\n'
   if len(bottomout_stocks) > 0:
-    msg += msg + "反弹股票：" + '\n'
+    msg += "均价下跌，新价上涨的反弹股票：" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', bottomout_stocks)
-    msg += '\n'
+  msg += '\n'
+  if len(potential_stocks) > 0:
+    msg += "均价上涨，新价波动小的潜力股票：" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', potential_stocks)
+  msg += '\n'
   lmrmail = LMRMail()
   lmrmail.Send(msg, 'empty')
 
@@ -83,12 +90,11 @@ def TimerTask():
   """  
 
   # 设置定时任务
-  schedule.every().day.at("14:25").do(Task0)
-  schedule.every().day.at("15:00").do(Task0)
-  schedule.every().day.at("18:00").do(Task0)
+  schedule.every().day.at("09:45").do(Task0)
+  schedule.every().day.at("23:06").do(Task0)
+  schedule.every().day.at("20:47").do(Task0)
 
   while True:
     schedule.run_pending() # 运行所有可以运行的任务
     time.sleep(1)
-
 
