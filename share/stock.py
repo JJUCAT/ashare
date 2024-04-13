@@ -142,6 +142,20 @@ class Stock(object):
     mainfundflow.to_csv(path, index=None, encoding='utf-8-sig')
 
 
+  def GetIndustryFundFlowRanking(self, path, day):
+    """行业资金流向排行，接口有问题 !
+
+    Args:
+        path (str): 文件保存路径
+        day (int): 查阅天数 @[“即时”, "3日排行", "5日排行", "10日排行", "20日排行"]
+    """    
+    daynum = '即时'
+    if day > 1:
+      daynum = str(day)+"日排行"
+    industryfundflowranking = ak.stock_fund_flow_industry(symbol=daynum)
+    industryfundflowranking.to_csv(path, index=None, encoding='utf-8-sig')
+
+
   def GetIndustryFundFlow(self, path, industry, day):
     """行业资金流向排行
     列出行业个股的资金流入排行
@@ -215,6 +229,19 @@ class Stock(object):
     market = self.GetMarket(market)
     individualfund = ak.stock_individual_fund_flow(stock=code, market=market)
     individualfund.to_csv(path, index=None, encoding='utf-8-sig')
+
+
+  def GetIndividualIndustry(self, code):
+    """个股信息，个股所在行业
+
+    Args:
+        path (str): 保存路径
+        code (str): 股票代码
+    """    
+    individualinfo = ak.stock_individual_info_em(symbol=code)
+    industry = individualinfo[2][1]
+    print("code %s is in industry %s" % (code, industry))
+    return 
 
 
   def GetData(self, data_path):

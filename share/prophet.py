@@ -81,6 +81,29 @@ class Prophet(object):
       ok = True
     return ok
 
+  def FilterRising(self, data_path, average, rang):
+    """筛选出 data_path 中价格在上涨的股票
+
+    Args:
+        data_path (str): 数据目录
+        average (int): 平均价格天数
+        rang (int): 计算天数
+
+    Returns:
+        list: 股票代码列表
+    """    
+    stocks_code = []
+
+    for root, dirs, files in os.walk(data_path):
+      for file in files:
+        if self.IsAveragePriceInTrend(root+file, average, rang, 1, 1):
+          code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
+          stocks_code.append(code)
+          # print("%s is below recent price." % (code))
+      break # 跳过 os.walk 对子目录 dirs 的遍历
+    print("共有 %d 支股票可能处于上升状态。" % (len(stocks_code)))
+    return stocks_code
+
 
   def FilterUnderestimate(self, data_path, average, rang):
     """筛选出 data_path 中价格低于最近平均值的股票
@@ -175,6 +198,7 @@ class Prophet(object):
     diff = abs(float(revr_list[0][2]) - average_price_list[0])
     price_delta = diff / average_price_list[0]
     if price_delta < error:
+      # print("file:%s, price delta %f, error %f" % (file, price_delta, error))
       isInRang = True
 
     # 判断平均价格趋势

@@ -50,7 +50,7 @@ def Task0():
   stock.GetPriceStocksMoreDay(csv_path, price, main_fund, force_rise)
 
   #2 拉取股票近期数据
-  rang = 3 # 查看 3 天内的资金流向  
+  rang = 3 # 查看 3 天内的资金流向
   days = 40
   fund_file = csv_path + 'price_stock_' + str(rang) + '.csv'
   today_fund_file = csv_path + 'price_stock_1.csv'
@@ -61,6 +61,7 @@ def Task0():
   average_day = 5
   total_day = 30
   prophet = Prophet()
+  rising_stocks = prophet.FilterRising(save_path, average_day, total_day)
   underestimate_stocks = prophet.FilterUnderestimate(save_path, average_day, total_day)
   bottomout_stocks = prophet.FilterBottomOut(save_path, average_day, total_day)
   potential_stocks = prophet.FilterPotential(save_path, average_day, total_day, 0.05)
@@ -68,6 +69,10 @@ def Task0():
   now = time.time()
   current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
   msg = current + '\n'
+  if len(rising_stocks) > 0:
+    msg += "均价上涨，新价上涨的股票：" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', rising_stocks)
+  msg += '\n'
   if len(underestimate_stocks) > 0:
     msg += "均价上涨，新价较低的低估股票：" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', underestimate_stocks)
@@ -92,7 +97,7 @@ def TimerTask():
   # 设置定时任务
   schedule.every().day.at("09:45").do(Task0)
   schedule.every().day.at("23:06").do(Task0)
-  schedule.every().day.at("20:47").do(Task0)
+  schedule.every().day.at("16:11").do(Task0)
 
   while True:
     schedule.run_pending() # 运行所有可以运行的任务
