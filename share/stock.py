@@ -321,7 +321,7 @@ class Stock(object):
 
 
   def GetPriceStocks(self, stocks_csv, price_stock_csv, price, main_fund, force_rise=True):
-    """筛选价格低于 price 的股票
+    """筛选价格低于 price 的股票，同时超大单和大单都是买入
 
     Args:
         stocks_csv (str): GetFundFlow 函数获取 csv 数据
@@ -356,6 +356,42 @@ class Stock(object):
       f.close()
 
 
+  def GetPriceStocksByRanking(self, stocks_csv, price_stock_csv, price, rise, count, force_rise=True):
+    """筛选价格低于 price 的股票，同时主力是买入
+
+    Args:
+        stocks_csv (str): GetFundFlow 函数获取 csv 数据
+        price_stock_csv (str): 保存筛选后的股票 csv 数据
+        price (float): 筛选的股价上限
+        rise (float): 涨幅
+        count (int): 筛选前 count 支股票
+        force_rise (bool): 是否需要超大单和大单都是上涨的
+    """    
+    csv_reader = csv.reader(open(stocks_csv))
+    num = 0
+
+    with open(price_stock_csv, "a", encoding="utf-8", newline="") as f:
+      csv_writer = csv.writer(f) # 基于文件对象构建 csv写入对象
+      for row in csv_reader:
+        # csv 中字符 '-' 表示空栅格
+        if row[3] == '-':
+          break
+
+        if num >= count + 1:
+          break
+
+        num += 1 # 第一行是项目标题
+        if num == 1:
+          csv_writer.writerow(row)
+          continue
+
+        if float(row[3]) <= price and float(row[6]) >= 0:
+          if float(row[4]) >= rise and float(row[4]) <= rise+3.0:
+            csv_writer.writerow(row)
+
+      f.close()
+
+
   def GetPriceStocksMoreDay(self, csv_path, price, main_fund, force_rise):
     """获取价格低于 price 的多只股票多日数据
 
@@ -377,6 +413,7 @@ class Stock(object):
           # print("file:", file)
           # print("read path: %s, save path %s" % (read_path, save_path))
           self.GetPriceStocks(read_path, save_path, price, main_fund, force_rise)
+          # self.GetPriceStocksByRanking(read_path, save_path, price, 3.0, 500, force_rise)
       break # 跳过 os.walk 对子目录 dirs 的遍历
 
 

@@ -58,13 +58,13 @@ def Task0():
   stock.GetRecentStocks(fund_file, today_fund_file, save_path, days)
 
   #3 挑选股票
-  average_day = 5
+  average_day = 3 # 5
   total_day = 30
   prophet = Prophet()
   rising_stocks = prophet.FilterRising(save_path, average_day, total_day)
   underestimate_stocks = prophet.FilterUnderestimate(save_path, average_day, total_day)
   bottomout_stocks = prophet.FilterBottomOut(save_path, average_day, total_day)
-  potential_stocks = prophet.FilterPotential(save_path, average_day, total_day, 0.05)
+  # potential_stocks = prophet.FilterPotential(save_path, average_day, total_day, 0.05)
   #4 发送邮件
   now = time.time()
   current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
@@ -81,10 +81,10 @@ def Task0():
     msg += "均价下跌，新价上涨的反弹股票：" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', bottomout_stocks)
   msg += '\n'
-  if len(potential_stocks) > 0:
-    msg += "均价上涨，新价波动小的潜力股票：" + '\n'
-    msg += reduce(lambda x, y: x+'\n'+y+'\n', potential_stocks)
-  msg += '\n'
+  # if len(potential_stocks) > 0:
+  #   msg += "均价上涨，新价波动小的潜力股票：" + '\n'
+  #   msg += reduce(lambda x, y: x+'\n'+y+'\n', potential_stocks)
+  # msg += '\n'
   lmrmail = LMRMail()
   lmrmail.Send(msg, 'empty')
 
@@ -97,7 +97,7 @@ def TimerTask():
   # 设置定时任务
   schedule.every().day.at("09:45").do(Task0)
   schedule.every().day.at("23:06").do(Task0)
-  schedule.every().day.at("16:11").do(Task0)
+  schedule.every().day.at("22:54").do(Task0)
 
   while True:
     schedule.run_pending() # 运行所有可以运行的任务
