@@ -44,18 +44,20 @@ def Task0():
   stock.GetData(csv_path);
 
   #1 在近期资金流动热门股票中筛选价格适宜的股票
-  price = 20
-  main_fund = 10.0
-  force_rise = True 
-  stock.GetPriceStocksMoreDay(csv_path, price, main_fund, force_rise)
+  price_low = 8.0
+  price_high = 20.0
+  main_fund = 0.01
+  force_rise = False 
+  stock.GetPriceStocksMoreDay(csv_path, price_low, price_high, main_fund, force_rise)
 
   #2 拉取股票近期数据
-  rang = 3 # 查看 3 天内的资金流向
-  days = 40
+  rang = 1 # 查看 rang 天内的资金流向
+  days = 60
+  market_value = 100.0 # 总市值 100E
   fund_file = csv_path + 'price_stock_' + str(rang) + '.csv'
-  today_fund_file = csv_path + 'price_stock_1.csv'
   save_path = csv_path + reasonable_price_stocks_dir
-  stock.GetRecentStocks(fund_file, today_fund_file, save_path, days)
+  stock.GetRecentStocks(fund_file, save_path, days, market_value)
+  return
 
   #3 挑选股票
   average_day = 3 # 5

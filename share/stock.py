@@ -17,12 +17,41 @@ class Stock(object):
 
   def GetStock(self, path):
     """获取 A 股所有股票
+    只有股票名
 
     Args:
         path (str): 文件保存路径
     """    
     astocks = ak.stock_info_a_code_name()
     astocks.to_csv(path, index=None, encoding='utf-8-sig')
+
+
+  def GetRealTime(self, path):
+    """获取 A 股所有股票的实时数据
+
+    Args:
+        path (str): 文件保存路径
+    """    
+    rta = ak.stock_zh_a_spot_em()
+    rta.to_csv(path, index=None, encoding='utf-8-sig')
+
+
+  def IsStockMarketValueGreaterThan(self, code, market_value):
+    """判断股票企业市值是否大于 market_value
+
+    Args:
+        code (str): 股票代码
+        market_value (float): 市值，单位亿
+
+    Returns:
+        bool:
+    """    
+    csv_reader = csv.reader(open(self.realtime_path_))
+    for row in csv_reader:
+      if row[1] == code: # 股票代码
+        if float(row[17]) >= market_value * 1.0e+8: # 市值
+          return True
+    return False
 
 
   def GetHotRank(self, path):
@@ -256,6 +285,13 @@ class Stock(object):
     # if not file.is_file():
     #   self.GetStock(stocks_path)
 
+    # A 股所有股票实时数据
+    realtime_path = data_path + 'realtime.csv'
+    self.realtime_path_ = realtime_path
+    file = pathlib.Path(realtime_path)
+    if not file.is_file():
+      self.GetRealTime(realtime_path)
+
     # 东方财富热门股票排行
     # hot_rank_path = data_path + 'hot_rank.csv'
     # file = pathlib.Path(hot_rank_path)
@@ -263,7 +299,7 @@ class Stock(object):
     #   self.GetHotRank(hot_rank_path)
 
     # 1，3，5，10 天资金流向排行
-    daynum_list = [1, 3, 5, 10]
+    daynum_list = [1] # [1, 3, 5, 10]
     for daynum in daynum_list:
       fund_flow_path = data_path + 'fund_flow_' + str(daynum) + '.csv'
       file = pathlib.Path(fund_flow_path)
@@ -271,10 +307,10 @@ class Stock(object):
         self.GetFundFlow(fund_flow_path, daynum)
 
     # 大盘资金流向历史数据
-    market_fund_flow_path = data_path + 'market_fund_flow.csv'
-    file = pathlib.Path(market_fund_flow_path)
-    if not file.is_file():  
-      self.GetMarketFundFlow(market_fund_flow_path)
+    # market_fund_flow_path = data_path + 'market_fund_flow.csv'
+    # file = pathlib.Path(market_fund_flow_path)
+    # if not file.is_file():  
+    #   self.GetMarketFundFlow(market_fund_flow_path)
 
     # 1，5，10 天板块资金流向排行
     # daynum_list = [1, 5, 10]
@@ -320,13 +356,14 @@ class Stock(object):
     #   self.GetStrongStock(strong_stock_path, strong_date)
 
 
-  def GetPriceStocks(self, stocks_csv, price_stock_csv, price, main_fund, force_rise=True):
+  def GetPriceStocks(self, stocks_csv, price_stock_csv, price_low, price_high, main_fund, force_rise=True):
     """筛选价格低于 price 的股票，同时超大单和大单都是买入
 
     Args:
         stocks_csv (str): GetFundFlow 函数获取 csv 数据
         price_stock_csv (str): 保存筛选后的股票 csv 数据
-        price (float): 筛选的股价上限
+        price_low (float): 筛选的股价下区间
+        price_high (float): 筛选的股价上区间
         main_fund (float): 主力涨幅，百分比
         force_rise (bool): 是否需要超大单和大单都是上涨的
     """    
@@ -340,21 +377,24 @@ class Stock(object):
         if row[3] == '-':
           break
 
-        num += 1 # 第一行是项目标题
-        if num == 1:
+        if num == 0: # 第一行是项目标题
           csv_writer.writerow(row)
+          num = 1
           continue
 
-        if float(row[3]) <= price and float(row[6]) >= main_fund:
-          write = True
-          if force_rise == True:
-            if float(row[8]) < 0 or float(row[10]) < 0:
-              write = False
-          if write == True:
-            csv_writer.writerow(row)
-
+        if float(row[3]) >= price_low and float(row[3]) <= price_high:
+          # print("new price %f" % (float(row[3])))
+          if float(row[6]) >= main_fund:
+            write = True
+            if force_rise == True:
+              if float(row[8]) < 0 or float(row[10]) < 0:
+                write = False
+            if write == True:
+              num += 1
+              row[0] = str(num-1)
+              csv_writer.writerow(row)
       f.close()
-
+      print("get price stocks %d num." % (num-1))
 
   def GetPriceStocksByRanking(self, stocks_csv, price_stock_csv, price, rise, count, force_rise=True):
     """筛选价格低于 price 的股票，同时主力是买入
@@ -392,12 +432,13 @@ class Stock(object):
       f.close()
 
 
-  def GetPriceStocksMoreDay(self, csv_path, price, main_fund, force_rise):
+  def GetPriceStocksMoreDay(self, csv_path, price_low, price_high, main_fund, force_rise):
     """获取价格低于 price 的多只股票多日数据
 
     Args:
         csv_path (str): csv 数据目录
-        price (float): 价格
+        price_low (float): 价格下区间
+        price_low (float): 价格上区间
         main_fund (float): 主力涨幅，百分比
         force_rise (bool): 是否需要超大单和大单都是上涨的
     """    
@@ -412,19 +453,19 @@ class Stock(object):
           save_path = csv_path+'price_stock_'+tail[0]
           # print("file:", file)
           # print("read path: %s, save path %s" % (read_path, save_path))
-          self.GetPriceStocks(read_path, save_path, price, main_fund, force_rise)
+          self.GetPriceStocks(read_path, save_path, price_low, price_high, main_fund, force_rise)
           # self.GetPriceStocksByRanking(read_path, save_path, price, 3.0, 500, force_rise)
       break # 跳过 os.walk 对子目录 dirs 的遍历
 
 
-  def GetRecentStocks(self, csv_file, today_fund_file, save_path, days):
+  def GetRecentStocks(self, csv_file, save_path, days, market_value):
     """获取 csv_path 文件内股票最近 days 天的数据
 
     Args:
         csv_file (str): 要读文件，格式由 GetPriceStocksMoreDay() 提供
-        today_fund_file (str): 今日资金流向文件，格式由 GetPriceStocksMoreDay() 提供
         save_path (str): 保存路径
         days (int): 要查阅的天数
+        market_value (float): 市值，单位亿
     """    
     csv_reader = csv.reader(open(csv_file))
     num = 0
@@ -434,8 +475,8 @@ class Stock(object):
       if row[3] == '-':
         break
 
-      num += 1 # 第一行是项目标题
-      if num == 1:
+      if num == 0: # 第一行是项目标题
+        num = 1
         continue
 
       pattern = r'^2' # '2'开头的股票代码不看
@@ -450,14 +491,11 @@ class Stock(object):
 
       code_index = 1
       name_index = 2
-      main_fund_index = 6
-      super_fund_index = 8
-      large_fund_index = 10
-      today_csv_reader = csv.reader(open(today_fund_file))
-      for r in today_csv_reader:
-        if r[code_index] == row[code_index] and float(r[large_fund_index]) > 0 and float(r[super_fund_index]) > 0:
-          code = row[code_index]      
-          name = row[name_index]
-          stock_history_path = save_path + code + '_' + name + '.csv'
-          self.GetStockHistory(stock_history_path, code, days)
+      code = row[code_index]
+      name = row[name_index]
+      if (self.IsStockMarketValueGreaterThan(code, market_value)):
+        num += 1
+        stock_history_path = save_path + code + '_' + name + '.csv'
+        self.GetStockHistory(stock_history_path, code, days)
+    print("filter, get recent stock %d num." % (num))
 
