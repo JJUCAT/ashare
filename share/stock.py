@@ -488,6 +488,12 @@ class Stock(object):
       pattern = r'^退市' # '退市'不看
       if re.match(pattern, row[2]):
         continue
+      pattern = r'.*U$' # 'U' 未盈利不看
+      if re.match(pattern, row[2]):
+        continue
+      pattern = r'.*W$' # 'W' 同股不同权不看
+      if re.match(pattern, row[2]):
+        continue
 
       code_index = 1
       name_index = 2

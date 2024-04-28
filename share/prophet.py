@@ -15,13 +15,14 @@ class Prophet(object):
   def __init__(self):
     print('Prophet init.')
 
-  def IsAveragePriceInTrend(self, file, average, rang, ave_trend, cur_position):
+  def IsAveragePriceInTrend(self, file, average, rang, trend_num, ave_trend, cur_position):
     """判断股票是否低于最近的平均值，文件数据是按日期从远到近排列，需要反向遍历！
 
     Args:
         file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
         average (int): 平均价格天数
         rang (int): 计算天数
+        trend_num (int): 持续 trend_num 个均价才确认趋势
         ave_trend (int): @-1:下降; @1:上升;
         cur_position (int): @-1:当前价格低于最近平均价格; @1:当前价格高于最近平均价格
     Returns:
@@ -63,7 +64,6 @@ class Prophet(object):
 
     # 判断平均价格趋势
     continue_count = 0
-    rise_count = 3
     isAvePriceTrendCondOk = False
     for i in range(len(average_price_list)):
       if i == len(average_price_list)-2:
@@ -71,7 +71,7 @@ class Prophet(object):
       step = average_price_list[i] - average_price_list[i+1]
       if step * ave_trend > 0:
         continue_count += 1
-        if continue_count >= rise_count:
+        if continue_count >= trend_num:
           isAvePriceTrendCondOk = True           
       else:
         break
@@ -96,7 +96,7 @@ class Prophet(object):
 
     for root, dirs, files in os.walk(data_path):
       for file in files:
-        if self.IsAveragePriceInTrend(root+file, average, rang, 1, 1):
+        if self.IsAveragePriceInTrend(root+file, average, rang, 3, 1, 1):
           code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
           stocks_code.append(code)
           # print("%s is below recent price." % (code))
@@ -129,12 +129,13 @@ class Prophet(object):
     return stocks_code
 
 
-  def FilterBottomOut(self, data_path, average, rang):
+  def FilterBottomOut(self, data_path, short_days, middle_days, rang):
     """筛选出 data_path 中触底反弹的股票
 
     Args:
         data_path (str): 数据目录
-        average (int): 平均价格天数
+        short_days (int): 短线平均价格天数
+        middle_days (int): 中线平均价格天数
         rang (int): 计算天数
 
     Returns:
@@ -144,10 +145,11 @@ class Prophet(object):
 
     for root, dirs, files in os.walk(data_path):
       for file in files:
-        if self.IsAveragePriceInTrend(root+file, average, rang, -1, 1):
-          code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
-          stocks_code.append(code)
-          # print("%s is below recent price." % (code))
+        if self.IsAveragePriceInTrend(root+file, middle_days, rang, 3, -1, 1): # 中线下跌
+          if self.IsAveragePriceInTrend(root+file, short_days, rang, 1, 1, 1): # 短线抬头
+            code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
+            stocks_code.append(code)
+            # print("%s is below recent price." % (code))
       break # 跳过 os.walk 对子目录 dirs 的遍历
     print("共有 %d 支股票可能触底反弹。" % (len(stocks_code)))
     return stocks_code

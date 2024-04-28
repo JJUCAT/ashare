@@ -57,16 +57,17 @@ def Task0():
   fund_file = csv_path + 'price_stock_' + str(rang) + '.csv'
   save_path = csv_path + reasonable_price_stocks_dir
   stock.GetRecentStocks(fund_file, save_path, days, market_value)
-  return
 
   #3 挑选股票
-  average_day = 3 # 5
-  total_day = 30
+  short_days = 5 # 短线均价天数
+  middle_days = 10
+  total_day = 20
   prophet = Prophet()
-  rising_stocks = prophet.FilterRising(save_path, average_day, total_day)
-  underestimate_stocks = prophet.FilterUnderestimate(save_path, average_day, total_day)
-  bottomout_stocks = prophet.FilterBottomOut(save_path, average_day, total_day)
-  # potential_stocks = prophet.FilterPotential(save_path, average_day, total_day, 0.05)
+  rising_stocks = prophet.FilterRising(save_path, short_days, total_day)
+  # underestimate_stocks = prophet.FilterUnderestimate(save_path, short_days, total_day)
+  bottomout_stocks = prophet.FilterBottomOut(save_path, short_days, middle_days, total_day)
+  # potential_stocks = prophet.FilterPotential(save_path, short_days, total_day, 0.05)
+
   #4 发送邮件
   now = time.time()
   current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
@@ -75,10 +76,10 @@ def Task0():
     msg += "均价上涨，新价上涨的股票：" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', rising_stocks)
   msg += '\n'
-  if len(underestimate_stocks) > 0:
-    msg += "均价上涨，新价较低的低估股票：" + '\n'
-    msg += reduce(lambda x, y: x+'\n'+y+'\n', underestimate_stocks)
-  msg += '\n'
+  # if len(underestimate_stocks) > 0:
+  #   msg += "均价上涨，新价较低的低估股票：" + '\n'
+  #   msg += reduce(lambda x, y: x+'\n'+y+'\n', underestimate_stocks)
+  # msg += '\n'
   if len(bottomout_stocks) > 0:
     msg += "均价下跌，新价上涨的反弹股票：" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', bottomout_stocks)
