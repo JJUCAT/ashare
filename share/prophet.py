@@ -249,5 +249,153 @@ class Prophet(object):
     return stocks_code
 
 
+  def GetAverage(self, file, average, rang):
+    """计算股价均值，文件数据是按日期从远到近排列，需要反向遍历！
 
+    Args:
+        file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
+        average (int): 平均价格天数
+        rang (int): 计算天数
+    Returns:
+        list: 移动平均股价，从最近到最远的日期排序
+    """    
+    csv_reader = csv.reader(open(file))
+    list_csv = list(csv_reader) # 转 list
+    revr_list = list_csv[::-1]
+    average_price_list = []
+    for i in range(len(revr_list)):
+      # 行首项目名
+      if i == len(revr_list)-1:
+        break
+
+      # csv 中字符 '-' 表示空栅格
+      if revr_list[i] == '-':
+        continue
+
+      # 检查天数
+      if i >= rang:
+        break
+
+      ave = 0.0
+      k = 0
+      for j in range(average):
+        if i + j >= len(revr_list)-1:
+          break
+        ave += float(revr_list[i+j][2])
+        k += 1
+      ave = ave / k
+      average_price_list.append(ave)
+    return average_price_list
+
+
+  def GetMACD(self, file, rang, short_ave, long_ave, dem_ave, trend_num):
+    """计算 MACD 判断趋势
+
+    Args:
+        file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
+        rang (int): 计算天数
+        short_ave (int): 短线平均天数
+        long_ave (int): 长线平均天数
+        dem_ave (int): dem 平均天数，拿多少个差离值 dif 来平均
+        trend_num (int): 持续 trend_num 个均价才确认趋势
+
+    Returns:
+        int: 0 没有趋势, 1 上涨趋势, -1 下降趋势
+    """    
+    # 计算短线，长线均值
+    short_line = self.GetAverage(file, short_ave, rang) # 短线数据可能比长线多
+    long_line = self.GetAverage(file, long_ave, rang)
+
+    # 差离值 dif = 短线均值 short - 长线均值 long
+    dif=[]
+    for i in range(len(long_line)):
+      dif.append(short_line[i]-long_line[i])
+    # print("short num %d, long num %d, dif num %d" % (len(short_line), len(long_line), len(dif)))
+
+    # 讯号线 dem/macd = dif 均值
+    dem=[]
+    for i in range(len(dif)):
+      ave = 0.0
+      k = 0
+      for j in range(dem_ave):
+        if i + j >= len(dif):
+          break
+        ave += float(dif[i+j])
+        k += 1
+      ave = ave / k
+      dem.append(ave)
+    # print("dif num %d, dem num %d" %  (len(dif), len(dem)))
+
+    # osc = 差离值 dif - 讯号线 dem，osc 为正说明趋势上涨
+    # 均值天数越多，osc 滞后性越大
+    osc=[]
+    for i in range(len(dif)):
+      osc.append(dif[i]-dem[i])
+
+    # 下面是趋势判断， osc 和 dif&dem
+    # osc 趋势判断，比较滞后
+    continue_count = 0
+    orit=1 # 初始趋势
+    trend = 0 # 趋势方向，0 没有趋势, 1 上涨趋势, -1 下降趋势
+    for i in range(len(osc)):
+      if i == len(osc)-2:
+        break
+      step = osc[i] - osc[i+1]
+      # 趋势方向
+      if i == 0:
+        if step < 0:
+          orit = -1
+      if step * orit > 0: # 趋势相同
+        continue_count += 1
+        if continue_count >= trend_num:
+          trend = orit
+
+    # 用 dif 和 dem 判断，反应稍快一点点
+    current_rising = 0
+    dif_rising_count = 0
+    for i in range(len(dif)):
+      if dif[i] > 0:
+        dif_rising_count += 1
+      else:
+        break
+    dem_rising_count = 0
+    for i in range(len(dem)):
+      if dem[i] > 0:
+        dem_rising_count += 1
+      else:
+        break
+    if dif_rising_count > trend_num and dem_rising_count > trend_num:
+      current_rising = 1
+
+    final_trend = 0
+    if trend > 0 and current_rising > 0:
+      final_trend = 1
+    return final_trend
+
+
+  def FilterMACDRising(self, data_path, rang, short_ave, long_ave, dem_ave, trend_num):
+    """筛选出 data_path 中 MACD 上涨趋势的股票
+
+    Args:
+        file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
+        rang (int): 计算天数
+        short_ave (int): 短线平均天数
+        long_ave (int): 长线平均天数
+        dem_ave (int): dem 平均天数，拿多少个差离值 dif 来平均
+        trend_num (int): 持续 trend_num 个均价才确认趋势
+
+    Returns:
+        list: 股票代码列表
+    """    
+    stocks_code = []
+
+    for root, dirs, files in os.walk(data_path):
+      for file in files:
+        if self.GetMACD(root+file, rang, short_ave, long_ave, dem_ave, trend_num) > 0:
+            code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
+            stocks_code.append(code)
+            # print("%s is below recent price." % (code))
+      break # 跳过 os.walk 对子目录 dirs 的遍历
+    print("共有 %d 支股票用 MACD 观测到上涨 。" % (len(stocks_code)))
+    return stocks_code
 

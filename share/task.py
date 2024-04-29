@@ -63,19 +63,20 @@ def Task0():
   middle_days = 10
   total_day = 20
   prophet = Prophet()
-  rising_stocks = prophet.FilterRising(save_path, short_days, total_day)
+  # rising_stocks = prophet.FilterRising(save_path, short_days, total_day) # 简单些，量大，容易挑到个别异常跳动的股
   # underestimate_stocks = prophet.FilterUnderestimate(save_path, short_days, total_day)
   bottomout_stocks = prophet.FilterBottomOut(save_path, short_days, middle_days, total_day)
   # potential_stocks = prophet.FilterPotential(save_path, short_days, total_day, 0.05)
+  macdrising_stocks = prophet.FilterMACDRising(save_path, 40, 7, 14, 3, 3)
 
   #4 发送邮件
   now = time.time()
   current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
   msg = current + '\n'
-  if len(rising_stocks) > 0:
-    msg += "均价上涨，新价上涨的股票：" + '\n'
-    msg += reduce(lambda x, y: x+'\n'+y+'\n', rising_stocks)
-  msg += '\n'
+  # if len(rising_stocks) > 0:
+  #   msg += "均价上涨，新价上涨的股票：" + '\n'
+  #   msg += reduce(lambda x, y: x+'\n'+y+'\n', rising_stocks)
+  # msg += '\n'
   # if len(underestimate_stocks) > 0:
   #   msg += "均价上涨，新价较低的低估股票：" + '\n'
   #   msg += reduce(lambda x, y: x+'\n'+y+'\n', underestimate_stocks)
@@ -88,7 +89,12 @@ def Task0():
   #   msg += "均价上涨，新价波动小的潜力股票：" + '\n'
   #   msg += reduce(lambda x, y: x+'\n'+y+'\n', potential_stocks)
   # msg += '\n'
+  if len(macdrising_stocks) > 0:
+    msg += "macd 预测上涨的股票：" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', macdrising_stocks)
+  msg += '\n'
   lmrmail = LMRMail()
+
   lmrmail.Send(msg, 'empty')
 
 
