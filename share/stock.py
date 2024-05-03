@@ -234,6 +234,7 @@ class Stock(object):
     end_date = end.strftime("%Y%m%d") 
     start_date = start.strftime("%Y%m%d") 
     # print("start date: %s, end date %s" % (start_date, end_date))
+    # adjust: 默认返回不复权的数据; qfq: 返回前复权后的数据; hfq: 返回后复权后的数据
     stock_history = ak.stock_zh_a_hist(symbol=code, period="daily", start_date=start_date, end_date=end_date, adjust="qfq")
     stock_history.to_csv(save_path, index=None, encoding='utf-8-sig')
 

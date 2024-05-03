@@ -62,12 +62,20 @@ def Task0():
   short_days = 5 # 短线均价天数
   middle_days = 10
   total_day = 20
+
   prophet = Prophet()
   # rising_stocks = prophet.FilterRising(save_path, short_days, total_day) # 简单些，量大，容易挑到个别异常跳动的股
   # underestimate_stocks = prophet.FilterUnderestimate(save_path, short_days, total_day)
   bottomout_stocks = prophet.FilterBottomOut(save_path, short_days, middle_days, total_day)
   # potential_stocks = prophet.FilterPotential(save_path, short_days, total_day, 0.05)
-  macdrising_stocks = prophet.FilterMACDRising(save_path, 40, 7, 14, 3, 3)
+
+  # MACD 金叉 死叉 判断
+  short_ave = 12
+  long_ave = 26
+  dem_ave = 9
+  dif_trend_num = 5
+  osc_trend_num = 3  
+  macdrising_stocks = prophet.FilterMACD(save_path, 40, short_ave, long_ave, dem_ave, dif_trend_num, osc_trend_num, 1)
 
   #4 发送邮件
   now = time.time()

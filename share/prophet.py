@@ -288,8 +288,8 @@ class Prophet(object):
     return average_price_list
 
 
-  def GetMACD(self, file, rang, short_ave, long_ave, dem_ave, trend_num):
-    """计算 MACD 判断趋势
+  def GetMACD(self, file, rang, short_ave, long_ave, dem_ave, dif_trend_num ,osc_trend_num, strict=False):
+    """计算 MACD, 通过'金叉'和'死叉'判断买卖信号
 
     Args:
         file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
@@ -297,10 +297,12 @@ class Prophet(object):
         short_ave (int): 短线平均天数
         long_ave (int): 长线平均天数
         dem_ave (int): dem 平均天数，拿多少个差离值 dif 来平均
-        trend_num (int): 持续 trend_num 个均价才确认趋势
+        dif_trend_num (int): 持续 dif_trend_num 个均价才确认 dif 趋势
+        osc_trend_num (int): 持续 osc_trend_num 个均价才确认 osc 趋势
+        strict (bool): 是否严格执行，金叉要求 osc 为负，死叉要求 osc 为正
 
     Returns:
-        int: 0 没有趋势, 1 上涨趋势, -1 下降趋势
+        int: 0@没有信号, 1@上涨趋势，买入信号, -1@下降趋势，卖出信号
     """    
     # 计算短线，长线均值
     short_line = self.GetAverage(file, short_ave, rang) # 短线数据可能比长线多
@@ -320,7 +322,7 @@ class Prophet(object):
       for j in range(dem_ave):
         if i + j >= len(dif):
           break
-        ave += float(dif[i+j])
+        ave += dif[i+j]
         k += 1
       ave = ave / k
       dem.append(ave)
@@ -333,10 +335,10 @@ class Prophet(object):
       osc.append(dif[i]-dem[i])
 
     # 下面是趋势判断， osc 和 dif&dem
-    # osc 趋势判断，比较滞后
+    # osc 上升/下降判断
     continue_count = 0
-    orit=1 # 初始趋势
-    trend = 0 # 趋势方向，0 没有趋势, 1 上涨趋势, -1 下降趋势
+    osc_orit=0 # 初始趋势
+    osc_trend = 0 # 趋势方向，0 没有趋势, 1 上涨趋势, -1 下降趋势
     for i in range(len(osc)):
       if i == len(osc)-2:
         break
@@ -344,37 +346,66 @@ class Prophet(object):
       # 趋势方向
       if i == 0:
         if step < 0:
-          orit = -1
-      if step * orit > 0: # 趋势相同
+          osc_orit = -1
+        elif step > 0:
+          osc_orit = 1
+      if step * osc_orit > 0: # 趋势相同
         continue_count += 1
-        if continue_count >= trend_num:
-          trend = orit
+        if continue_count >= osc_trend_num:
+          osc_trend = osc_orit
+          break
+      else: # 没有趋势，结束
+        break
 
-    # 用 dif 和 dem 判断，反应稍快一点点
+    # 判断 dif 由下到上穿过 dem 还是 dif 由上到下穿过 dem
     current_rising = 0
     dif_rising_count = 0
+    continue_count = 0
+    dif_orit=0
+    dif_trend = 0
     for i in range(len(dif)):
-      if dif[i] > 0:
-        dif_rising_count += 1
-      else:
+      if i == len(dif)-2:
         break
-    dem_rising_count = 0
-    for i in range(len(dem)):
-      if dem[i] > 0:
-        dem_rising_count += 1
-      else:
+      step = dif[i] - dif[i+1]
+      if i == 0:
+        if step < 0:
+          dif_orit = -1
+        elif step > 0:
+          dif_orit = 1
+      if step * dif_orit > 0: # 趋势相同
+        continue_count += 1
+        if continue_count >= dif_trend_num:
+          dif_trend = dif_orit
+          break
+      else: # 没有趋势，结束
         break
-    if dif_rising_count > trend_num and dem_rising_count > trend_num:
-      current_rising = 1
 
+    dif_rising_cross = False
+    dif_falling_cross = False
+    if dif_trend == 1:
+      if dif[0] > dem[0] and dif[dif_trend_num] < dem[dif_trend_num]:
+        dif_rising_cross = True
+    elif dif_trend == -1:
+      if dif[0] < dem[0] and dif[dif_trend_num] > dem[dif_trend_num]:
+        dif_falling_cross = True
+
+    # '金叉'和'死叉'判断
     final_trend = 0
-    if trend > 0 and current_rising > 0:
-      final_trend = 1
+    if strict == True:
+      if osc_trend > 0 and osc[0]<0 and dif_rising_cross == True:
+        final_trend = 1
+      elif osc_trend < 0 and osc[0]>0 and dif_falling_cross == True:
+        final_trend = -1
+    else:
+      if osc_trend > 0 and dif_rising_cross == True:
+        final_trend = 1
+      elif osc_trend < 0 and dif_falling_cross == True:
+        final_trend = -1
     return final_trend
 
 
-  def FilterMACDRising(self, data_path, rang, short_ave, long_ave, dem_ave, trend_num):
-    """筛选出 data_path 中 MACD 上涨趋势的股票
+  def FilterMACD(self, data_path, rang, short_ave, long_ave, dem_ave, dif_trend_num, osc_trend_num, trend=1):
+    """筛选出 data_path 中 MACD 上涨趋势或下跌趋势的股票
 
     Args:
         file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
@@ -382,7 +413,9 @@ class Prophet(object):
         short_ave (int): 短线平均天数
         long_ave (int): 长线平均天数
         dem_ave (int): dem 平均天数，拿多少个差离值 dif 来平均
-        trend_num (int): 持续 trend_num 个均价才确认趋势
+        dif_trend_num (int): 持续 dif_trend_num 个均价才确认 dif 趋势
+        osc_trend_num (int): 持续 osc_trend_num 个均价才确认 osc 趋势
+        trend (int): @-1: 筛选下跌趋势，“死叉”股票；@1:筛选上涨趋势，“金叉”股票
 
     Returns:
         list: 股票代码列表
@@ -391,11 +424,14 @@ class Prophet(object):
 
     for root, dirs, files in os.walk(data_path):
       for file in files:
-        if self.GetMACD(root+file, rang, short_ave, long_ave, dem_ave, trend_num) > 0:
+        cross = self.GetMACD(root+file, rang, short_ave, long_ave, dem_ave, dif_trend_num, osc_trend_num)
+        if cross * trend > 0:
             code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
             stocks_code.append(code)
             # print("%s is below recent price." % (code))
       break # 跳过 os.walk 对子目录 dirs 的遍历
-    print("共有 %d 支股票用 MACD 观测到上涨 。" % (len(stocks_code)))
+    type = "上涨趋势"
+    if trend < 0: type = "下跌趋势"
+    print("共有 %d 支股票用 MACD 观测到%s 。" % (len(stocks_code), type))
     return stocks_code
 
