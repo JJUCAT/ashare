@@ -506,3 +506,28 @@ class Stock(object):
         self.GetStockHistory(stock_history_path, code, days)
     print("filter, get recent stock %d num." % (num))
 
+
+  def GetMyStocks(self, data_file, save_path, days):
+    """获取 csv_path 文件内股票最近 days 天的数据
+
+    Args:
+        data_file (str): 要读文件
+        save_path (str): 保存路径
+        days (int): 要查阅的天数
+    """    
+    csv_reader = csv.reader(open(data_file))
+    num = 0
+
+    for row in csv_reader:
+      if num == 0: # 第一行是项目标题
+        num = 1
+        continue
+
+      code_index = 0
+      name_index = 1
+      code = row[code_index]
+      name = row[name_index]
+      num += 1
+      stock_history_path = save_path + code + '_' + name + '.csv'
+      self.GetStockHistory(stock_history_path, code, days)
+    print("filter, get recent stock %d num." % (num))

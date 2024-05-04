@@ -28,6 +28,9 @@ def Task0():
   potential_filtered_path = csv_path + potential_stocks_dir
   print('数据保存路径:%s\ncsv 路径:%s\n过滤后的数据路径:%s' %
         (base_path, csv_path, price_filtered_path))
+  mystocks_path = data_path + 'mystocks/'
+  mystocks_file = mystocks_path + '/mystocks.csv'
+  mystocks_data_path = mystocks_path + 'data/'
 
   if not os.path.exists(data_path):
     print('创建数据目录')
@@ -39,8 +42,21 @@ def Task0():
   os.mkdir(price_filtered_path)
   os.mkdir(potential_filtered_path)
 
+  if not os.path.exists(mystocks_path):
+    print('创建用户数据目录')
+    os.mkdir(mystocks_path)
+  if os.path.exists(mystocks_data_path):
+    print('清空用户股票数据目录')
+    shutil.rmtree(mystocks_data_path)
+  os.mkdir(mystocks_data_path)
+
+
+  # -------------------- 卖入信号 --------------------
+
   #0 拉取原始数据
   stock = Stock()
+  stock.GetMyStocks(mystocks_file, mystocks_data_path, 60)
+  return
   stock.GetData(csv_path);
 
   #1 在近期资金流动热门股票中筛选价格适宜的股票
@@ -117,7 +133,7 @@ def Task0():
     msg += reduce(lambda x, y: x+'\n'+y+'\n', macdrising_stocks)
   msg += '\n'
   if len(rmt) > 0:
-    msg += "macd和换手率和均线分析交集预测保持上涨的股票：" + '\n'
+    msg += "macd和换手率和均线分析交集预测保持上涨的股票:" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', rmt)
   msg += '\n'
   if len(rm) > 0:
@@ -130,6 +146,11 @@ def Task0():
   msg += '\n'
   lmrmail = LMRMail()
   lmrmail.Send(msg, 'empty')
+
+  # -------------------- 卖出信号 --------------------
+  stock.GetMyStocks(mystocks_path, mystocks_data_path, days)
+
+
 
 
 
