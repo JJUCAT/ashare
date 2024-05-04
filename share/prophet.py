@@ -435,3 +435,156 @@ class Prophet(object):
     print("共有 %d 支股票用 MACD 观测到%s 。" % (len(stocks_code), type))
     return stocks_code
 
+
+  def GetKAnalyse(self, file, scale_local, scale_global):
+    """通过 K 线分析涨跌, 锤头和看涨吞噬认为上涨趋势，射击之星和看跌吞噬认为下跌趋势
+
+    Args:
+        file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
+        scale_local (float): 实体线占当天比例
+        scale_global (float): 实体线占整体价格比例
+
+    Returns:
+        int: 0@没有信号, 1@上涨趋势，买入信号, -1@下降趋势，卖出信号
+    """    
+    csv_reader = csv.reader(open(file))
+    list_csv = list(csv_reader) # 转 list
+    revr_list = list_csv[::-1]
+    today_price = revr_list[0]
+    yesterday_price = revr_list[1]
+    today_price_start = float(today_price[1]) # 开盘价
+    today_price_end = float(today_price[2]) # 收盘价
+    today_price_high = float(today_price[3]) # 最高价
+    today_price_low = float(today_price[4]) # 最低价
+    yesterday_price_start = float(yesterday_price[1])
+    yesterday_price_end = float(yesterday_price[2])
+    today_entity = today_price_end-today_price_start # 实体线=收盘价-开盘价
+    yesterday_entity = yesterday_price_end-yesterday_price_start
+    today_entirety = today_price_high-today_price_low # 整体线=最高价-最低价
+    today_over_shadow = 0.0 # 上影线=最高价-开盘或者收盘价
+    today_under_shadow = 0.0 # 下影线=开盘或者收盘价-最低价    
+    if today_entity > 0: # 阳线
+      today_over_shadow = today_price_high - today_price_end
+      today_under_shadow = today_price_start - today_price_low
+    elif today_entity < 0: # 阴线
+      today_over_shadow = today_price_high - today_price_start
+      today_under_shadow = today_price_end - today_price_low
+
+    final_trend = 0
+    # 判断实体线是否合格
+    global_scl = abs(today_entity)/today_price_end
+    if global_scl>abs(scale_global):
+      # print("[ka] global scale ok, limit %f, cur %f" % (scale_global, global_scl))
+      local_scl = abs(today_entity)/abs(today_entirety)
+      if local_scl>abs(scale_local): # 判断锤头和射击之星
+        # print("[ka] local scale ok, limit %f, cur %f" % (scale_local, local_scl))
+        over_shadow_scale = abs(today_over_shadow)/abs(today_entirety)
+        under_shadow_scale = abs(today_under_shadow)/abs(today_entirety)
+        # print("[ka] oss %f, uss %f" % (over_shadow_scale, under_shadow_scale))
+        if today_entity > 0 and over_shadow_scale < 0.1 and abs(today_under_shadow) > 2*abs(today_entity):
+          final_trend=1
+        elif today_entity < 0 and under_shadow_scale < 0.1 and abs(today_over_shadow) > 2*abs(today_entity):
+          final_trend=-1
+      if yesterday_entity < 0 and today_entity > 0: # 判断看涨吞噬
+        if today_price_end > yesterday_price_start and today_price_start < yesterday_price_end:
+          final_trend=1
+      if yesterday_entity > 0 and today_entity < 0: # 判断看跌吞噬
+        if today_price_end < yesterday_price_start and today_price_start > yesterday_price_end:
+          final_trend=-1
+    return final_trend
+
+
+  def FilterKAnalyse(self, data_path, scale_local, scale_global, trend=1):
+    """筛选出 data_path 中 MACD 上涨趋势或下跌趋势的股票
+
+    Args:
+        file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
+        scale_local (float): 实体线占当天比例
+        scale_global (float): 实体线占整体价格比例
+        trend (int): @-1: 筛选下跌趋势；@1:筛选上涨趋势
+
+    Returns:
+        list: 股票代码列表
+    """    
+    stocks_code = []
+
+    for root, dirs, files in os.walk(data_path):
+      for file in files:
+        ka = self.GetKAnalyse(root+file, scale_local, scale_global)
+        if ka * trend > 0:
+            code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
+            stocks_code.append(code)
+            # print("%s is below recent price." % (code))
+      break # 跳过 os.walk 对子目录 dirs 的遍历
+    type = "上涨趋势"
+    if trend < 0: type = "下跌趋势"
+    print("共有 %d 支股票用 K 线分析，观测到%s 。" % (len(stocks_code), type))
+    return stocks_code
+
+
+  def GetTurnoverRate(self, file, turnover, rang, greater=True):
+    """通过近期的换手率判断趋势是否确定
+
+    Args:
+        file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
+        turnover (float): 换手率指标
+        rang (int): 查看天数
+        greater (bool): @True: 大于 turnover 的筛选; @False: 小于 turnover 的筛选
+
+    Returns:
+        bool: 平均换手率达标
+    """    
+    csv_reader = csv.reader(open(file))
+    list_csv = list(csv_reader) # 转 list
+    revr_list = list_csv[::-1]
+    ave = 0.0
+    k = 0
+    for i in range(len(revr_list)):
+      # 行首项目名
+      if i == len(revr_list)-1:
+        break
+
+      # csv 中字符 '-' 表示空栅格
+      if revr_list[i] == '-':
+        continue
+
+      # 检查天数
+      if i >= rang:
+        break
+
+      ave += float(revr_list[i][10])
+      k += 1
+      if (k >= rang):
+        break
+
+    ave = ave / k
+    if greater:
+      if (ave > turnover):
+        return True
+    else:
+      if (ave < turnover):
+        return True
+    return False
+
+
+  def FilterTurnoverRate(self, data_path, turnover, rang, greater=True):
+    """筛选出 data_path 中近期的换手率趋势确定的取票
+
+    Args:
+        file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
+        turnover (float): 换手率指标
+        rang (int): 查看天数
+
+    Returns:
+        list: 股票代码列表
+    """    
+    stocks_code = []
+
+    for root, dirs, files in os.walk(data_path):
+      for file in files:
+        if self.GetTurnoverRate(root+file, turnover, rang, greater):
+          code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
+          stocks_code.append(code)
+          # print("%s is below recent price." % (code))
+      break # 跳过 os.walk 对子目录 dirs 的遍历
+    return stocks_code

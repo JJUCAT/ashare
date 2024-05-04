@@ -59,15 +59,12 @@ def Task0():
   stock.GetRecentStocks(fund_file, save_path, days, market_value)
 
   #3 挑选股票
-  short_days = 5 # 短线均价天数
-  middle_days = 10
-  total_day = 20
+  short_days = 20 # 均价天数
+  middle_days = 30
+  total_day = 40
 
   prophet = Prophet()
-  # rising_stocks = prophet.FilterRising(save_path, short_days, total_day) # 简单些，量大，容易挑到个别异常跳动的股
-  # underestimate_stocks = prophet.FilterUnderestimate(save_path, short_days, total_day)
-  bottomout_stocks = prophet.FilterBottomOut(save_path, short_days, middle_days, total_day)
-  # potential_stocks = prophet.FilterPotential(save_path, short_days, total_day, 0.05)
+  rising_stocks = prophet.FilterRising(save_path, short_days, total_day) # 简单些，量大，容易挑到个别异常跳动的股
 
   # MACD 金叉 死叉 判断
   short_ave = 12
@@ -77,6 +74,32 @@ def Task0():
   osc_trend_num = 3  
   macdrising_stocks = prophet.FilterMACD(save_path, 40, short_ave, long_ave, dem_ave, dif_trend_num, osc_trend_num, 1)
 
+  # K 线分析
+  local_scale = 0.25 # 当天实体线对当天 K 线占比
+  global_scale = 0.02 # 当天实体线对收盘价占比
+  kanalyse_stocks = prophet.FilterKAnalyse(save_path, local_scale, global_scale, 1)
+
+  # 换手率判断趋势是否成型
+  turnover_flip = 2.0 # 换手率，单位 %，高换手率意味着趋势要翻转
+  turnover_continue = 0.8 # 换手率，单位 %，低换手率意味着趋势保持
+  turnover_rang = 3 # 检查天数
+  turnover_flip_stocks = prophet.FilterTurnoverRate(save_path, turnover_flip, turnover_rang, True)
+  print("共有 %d 支股票用换手率检测到趋势翻转" % (len(turnover_flip_stocks)))
+  turnover_continue_stocks = prophet.FilterTurnoverRate(save_path, turnover_continue, turnover_rang, False)
+  print("共有 %d 支股票用换手率检测到趋势保持" % (len(turnover_continue_stocks)))
+
+  # 均线分析和换手率趋势保持交集
+  rmt = list(set(macdrising_stocks) & set(turnover_continue_stocks) & set(rising_stocks))
+  print("共有 %d 支股票用 MACD 和换手率和均线分析观测到保持趋势" % (len(rmt)))
+
+  # 均线分析和 macd 交集
+  rm = list(set(macdrising_stocks) & set(rising_stocks))
+  print("共有 %d 支股票用 MACD 和均线分析观测到上涨趋势" % (len(rm)))
+
+  # macd 和 k 线分析交集
+  mk = list(set(macdrising_stocks) & set(kanalyse_stocks))
+  print("共有 %d 支股票用 MACD 和 K 线分析观测到上涨趋势" % (len(mk)))
+
   #4 发送邮件
   now = time.time()
   current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
@@ -85,24 +108,27 @@ def Task0():
   #   msg += "均价上涨，新价上涨的股票：" + '\n'
   #   msg += reduce(lambda x, y: x+'\n'+y+'\n', rising_stocks)
   # msg += '\n'
-  # if len(underestimate_stocks) > 0:
-  #   msg += "均价上涨，新价较低的低估股票：" + '\n'
-  #   msg += reduce(lambda x, y: x+'\n'+y+'\n', underestimate_stocks)
-  # msg += '\n'
-  if len(bottomout_stocks) > 0:
-    msg += "均价下跌，新价上涨的反弹股票：" + '\n'
-    msg += reduce(lambda x, y: x+'\n'+y+'\n', bottomout_stocks)
+  if len(kanalyse_stocks) > 0:
+    msg += "k 线分析预测上涨的股票：" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', kanalyse_stocks)
   msg += '\n'
-  # if len(potential_stocks) > 0:
-  #   msg += "均价上涨，新价波动小的潜力股票：" + '\n'
-  #   msg += reduce(lambda x, y: x+'\n'+y+'\n', potential_stocks)
-  # msg += '\n'
   if len(macdrising_stocks) > 0:
     msg += "macd 预测上涨的股票：" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', macdrising_stocks)
   msg += '\n'
+  if len(rmt) > 0:
+    msg += "macd和换手率和均线分析交集预测保持上涨的股票：" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', rmt)
+  msg += '\n'
+  if len(rm) > 0:
+    msg += "macd 和均线分析交集预测上涨的股票：" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', rm)
+  msg += '\n'
+  if len(mk) > 0:
+    msg += "macd 和 k 分析交集预测上涨的股票：" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', mk)
+  msg += '\n'
   lmrmail = LMRMail()
-
   lmrmail.Send(msg, 'empty')
 
 
