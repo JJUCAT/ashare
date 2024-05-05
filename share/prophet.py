@@ -81,13 +81,15 @@ class Prophet(object):
       ok = True
     return ok
 
-  def FilterRising(self, data_path, average, rang):
+  def FilterAveragePrice(self, data_path, average, rang, ave_trend, cur_position):
     """筛选出 data_path 中价格在上涨的股票
 
     Args:
         data_path (str): 数据目录
         average (int): 平均价格天数
         rang (int): 计算天数
+        ave_trend (int): @-1:下降; @1:上升;
+        cur_position (int): @-1:当前价格低于最近平均价格; @1:当前价格高于最近平均价格
 
     Returns:
         list: 股票代码列表
@@ -96,12 +98,15 @@ class Prophet(object):
 
     for root, dirs, files in os.walk(data_path):
       for file in files:
-        if self.IsAveragePriceInTrend(root+file, average, rang, 3, 1, 1):
+        if self.IsAveragePriceInTrend(root+file, average, rang, 3, ave_trend, cur_position):
           code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
           stocks_code.append(code)
           # print("%s is below recent price." % (code))
       break # 跳过 os.walk 对子目录 dirs 的遍历
-    print("共有 %d 支股票可能处于上升状态。" % (len(stocks_code)))
+    trend="上升"
+    if ave_trend < 0:
+      trend="下跌"
+    print("共有 %d 支股票可能处于%s状态。" % (len(stocks_code), trend))
     return stocks_code
 
 

@@ -480,7 +480,7 @@ class Stock(object):
         num = 1
         continue
 
-      pattern = r'^2' # '2'开头的股票代码不看
+      pattern = r'^2' # '2'开头的股票代码不看，200 开头是深圳 B 股
       if re.match(pattern, row[1]):
         continue
       pattern = r'^9' # '9'开头的股票代码不看
@@ -526,8 +526,10 @@ class Stock(object):
       code_index = 0
       name_index = 1
       code = row[code_index]
+      while len(code) < 6:
+        code = '0' + code
       name = row[name_index]
       num += 1
       stock_history_path = save_path + code + '_' + name + '.csv'
       self.GetStockHistory(stock_history_path, code, days)
-    print("filter, get recent stock %d num." % (num))
+    print("filter, get recent stock %d num." % (num-1))

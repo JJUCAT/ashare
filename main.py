@@ -14,4 +14,6 @@ import shutil
 if __name__ == '__main__':
   print(' --------- 财源滚滚 --------- ')
   # TimerTask()
-  Task0()
+  # TaskBuyMonitor()
+  TaskSellMonitor()
+
