@@ -21,14 +21,12 @@ def TaskBuyMonitor():
   """  
 
   base_path = '/home/lmr/ws/ashare/'
-  data_path = base_path + '/data/'
-  csv_path = data_path + '/csv/'
+  data_path = base_path + 'data/'
+  csv_path = data_path + 'csv/'
   reasonable_price_stocks_dir = 'reasonable_price_stocks/'
-  potential_stocks_dir = 'potential_stocks/'
-  price_filtered_path = csv_path + reasonable_price_stocks_dir  
-  potential_filtered_path = csv_path + potential_stocks_dir
-  print('数据保存路径:%s\ncsv 路径:%s\n过滤后的数据路径:%s' %
-        (base_path, csv_path, price_filtered_path))
+  price_filtered_path = csv_path + reasonable_price_stocks_dir
+  realtime_file = csv_path + 'realtime.csv'
+  print('数据保存路径:%s\ncsv 路径:%s' % (base_path, csv_path))
 
   if not os.path.exists(data_path):
     print('创建数据目录')
@@ -38,7 +36,6 @@ def TaskBuyMonitor():
     shutil.rmtree(csv_path)
   os.mkdir(csv_path)
   os.mkdir(price_filtered_path)
-  os.mkdir(potential_filtered_path)
 
   #0 拉取原始数据
   stock = Stock()
@@ -64,7 +61,7 @@ def TaskBuyMonitor():
   middle_days = 30
   total_day = 40
 
-  prophet = Prophet()
+  prophet = Prophet(realtime_file)
   rising_stocks = prophet.FilterAveragePrice(save_path, short_days, total_day, 1, 1)
 
   # MACD 金叉 判断
@@ -140,11 +137,13 @@ def TaskSellMonitor():
   """  
 
   base_path = '/home/lmr/ws/ashare/'
-  data_path = base_path + '/data/'
+  data_path = base_path + 'data/'
+  csv_path = data_path + 'csv/'
   print('数据保存路径:%s' % (base_path))
   mystocks_path = data_path + 'mystocks/'
   mystocks_file = mystocks_path + '/mystocks.csv'
   save_path = mystocks_path + 'data/'
+  realtime_file = csv_path + 'realtime.csv'
 
   if not os.path.exists(data_path):
     print('创建数据目录')
@@ -152,14 +151,10 @@ def TaskSellMonitor():
   if not os.path.exists(mystocks_path):
     print('创建用户数据目录')
     os.mkdir(mystocks_path)
-  if os.path.exists(save_path):
-    print('清空用户股票数据目录')
-    shutil.rmtree(save_path)
-  os.mkdir(save_path)
 
   stock = Stock()
-  prophet = Prophet()
-
+  prophet = Prophet(realtime_file)
+  prophet.UseRealtime(True)
   #0 拉取用户股票数据
   days = 60
   stock.GetMyStocks(mystocks_file, save_path, days)
