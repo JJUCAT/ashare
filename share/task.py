@@ -10,6 +10,7 @@ import time
 from share.stock import *
 from share.prophet import *
 from share.mail import *
+from share.info import *
 import shutil
 from functools import reduce
 
@@ -53,7 +54,7 @@ def TaskBuyMonitor():
   #2 拉取股票近期数据
   rang = 1 # 查看 rang 天内的资金流向
   days = 60
-  market_value = 100.0 # 总市值 100E
+  market_value = 80.0 # 总市值 100E
   fund_file = csv_path + 'price_stock_' + str(rang) + '.csv'
   save_path = csv_path + reasonable_price_stocks_dir
   stock.GetRecentStocks(fund_file, save_path, days, market_value)
@@ -102,7 +103,7 @@ def TaskBuyMonitor():
 
   #4 发送邮件
   now = time.time()
-  current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+  current = time.strftime("%Y-%m-%d %H:%M:%S 买入信号", time.localtime(now))
   msg = current + '\n'
   # if len(rising_stocks) > 0:
   #   msg += "均价上涨，新价上涨的股票：" + '\n'
@@ -205,7 +206,7 @@ def TaskSellMonitor():
 
   #4 发送邮件
   now = time.time()
-  current = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+  current = time.strftime("%Y-%m-%d %H:%M:%S 卖出信号", time.localtime(now))
   msg = current + '\n'
   # if len(rising_stocks) > 0:
   #   msg += "均价下跌，新价下跌的股票：" + '\n'

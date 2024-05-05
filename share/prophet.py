@@ -59,7 +59,8 @@ class Prophet(object):
     # 判断最近价格在最近平均值上下
     isPositionCondOk = False    
     price_delta = float(revr_list[0][2]) - average_price_list[0]
-    if cur_position * price_delta > 0:
+    diff = abs(price_delta)/average_price_list[0]
+    if cur_position * price_delta > 0 and diff < 0.1:
       isPositionCondOk = True
 
     # 判断平均价格趋势
