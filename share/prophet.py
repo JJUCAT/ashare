@@ -14,11 +14,11 @@ class Prophet(object):
 
   def __init__(self, realtime_file):
     self.realtime_file = realtime_file
-    self.use_realtime = False
+    self.use_realtime = False # ak.stock_zh_a_hist 接口得到的股票历史数据带有当天的最新数据，所有该接口无用
     print('Prophet init.')
 
   def UseRealtime(self, use):
-    self.use_realtime = use
+    self.use_realtime = False # ak.stock_zh_a_hist 接口得到的股票历史数据带有当天的最新数据，所有该接口无用
 
   def GetRealtimeStock(self, code):
     # print("realtime code is %s" % (code))

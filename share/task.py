@@ -15,7 +15,7 @@ import shutil
 from functools import reduce
 
 
-def TaskBuyMonitor():
+def TaskBuyMonitor(realtime=False):
   """定时任务，买入信号
      爬取股市数据，整理后发送邮件
   """  
@@ -62,7 +62,9 @@ def TaskBuyMonitor():
   total_day = 40
 
   prophet = Prophet(realtime_file)
+  prophet.UseRealtime(realtime)
   rising_stocks = prophet.FilterAveragePrice(save_path, short_days, total_day, 1, 1)
+  falling_stocks = prophet.FilterAveragePrice(save_path, short_days, total_day, -1, 1)
 
   # MACD 金叉 判断
   short_ave = 12
@@ -97,6 +99,9 @@ def TaskBuyMonitor():
   # macd 和 k 线分析交集
   mk = list(set(macdrising_stocks) & set(kanalyse_stocks))
   print("共有 %d 支股票用 MACD 和 K 线分析观测到上涨趋势" % (len(mk)))
+  
+  # 均线检测到下跌突破，k 线检测到上涨
+  fk = list(set(falling_stocks) & set(kanalyse_stocks))
 
   #4 发送邮件
   now = time.time()
@@ -126,12 +131,16 @@ def TaskBuyMonitor():
     msg += "macd 和 k 分析交集预测上涨的股票：" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', mk)
   msg += '\n'
+  if len(fk) > 0:
+    msg += "!!! 均线检测到下跌突破和 k 分析交集预测上涨的股票!!!: " + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', fk)
+  msg += '\n'
   lmrmail = LMRMail()
   lmrmail.Send(msg, 'empty')
 
 
 
-def TaskSellMonitor():
+def TaskSellMonitor(realtime=False):
   """定时任务，卖出信号检测
      爬取股市数据，整理后发送邮件
   """  
@@ -154,7 +163,7 @@ def TaskSellMonitor():
 
   stock = Stock()
   prophet = Prophet(realtime_file)
-  prophet.UseRealtime(True)
+  prophet.UseRealtime(realtime)
   #0 拉取用户股票数据
   days = 60
   stock.GetMyStocks(mystocks_file, save_path, days)
@@ -164,6 +173,7 @@ def TaskSellMonitor():
   middle_days = 30
   total_day = 40
   falling_stocks = prophet.FilterAveragePrice(save_path, short_days, total_day, -1, -1)
+  rising_stocks = prophet.FilterAveragePrice(save_path, short_days, total_day, 1, 1)
 
   # K 线分析
   local_scale = 0.25 # 当天实体线对当天 K 线占比
@@ -186,6 +196,9 @@ def TaskSellMonitor():
   print("共有 %d 支股票用换手率检测到趋势翻转" % (len(turnover_flip_stocks)))
   turnover_continue_stocks = prophet.FilterTurnoverRate(save_path, turnover_continue, turnover_rang, False)
   print("共有 %d 支股票用换手率检测到趋势保持" % (len(turnover_continue_stocks)))
+
+  # 均线上涨但是换手率增加
+  rt = list(set(turnover_continue_stocks) & set(falling_stocks))
 
   # 均线分析和换手率趋势保持交集
   rmt = list(set(macdrising_stocks) & set(turnover_continue_stocks) & set(falling_stocks))
@@ -215,6 +228,10 @@ def TaskSellMonitor():
     msg += "macd 预测下跌的股票：" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', macdrising_stocks)
   msg += '\n'
+  if len(rt) > 0:
+    msg += "！！！均线上涨但是换手率提高的股票，可能触顶了！！！:" + '\n'
+    msg += reduce(lambda x, y: x+'\n'+y+'\n', rt)
+  msg += '\n'
   if len(rmt) > 0:
     msg += "macd和换手率和均线分析交集预测保持下跌的股票:" + '\n'
     msg += reduce(lambda x, y: x+'\n'+y+'\n', rmt)
@@ -230,7 +247,13 @@ def TaskSellMonitor():
   lmrmail = LMRMail()
   lmrmail.Send(msg, 'empty')
 
+def TimerOffline():
+  TaskBuyMonitor(False)
+  TaskSellMonitor(False)
 
+def TimerOnline():
+  TaskBuyMonitor(True)
+  TaskSellMonitor(True)
 
 
 def TimerTask():
@@ -238,9 +261,11 @@ def TimerTask():
   """  
 
   # 设置定时任务
-  # schedule.every().day.at("09:45").do(Task0)
-  # schedule.every().day.at("23:06").do(Task0)
-  # schedule.every().day.at("22:54").do(Task0)
+  schedule.every().day.at("09:35").do(TimerOnline)
+  schedule.every().day.at("11:15").do(TimerOnline)
+  schedule.every().day.at("13:10").do(TimerOnline)
+  schedule.every().day.at("14:45").do(TimerOnline)
+  schedule.every().day.at("22:00").do(TimerOffline)
 
   while True:
     schedule.run_pending() # 运行所有可以运行的任务
