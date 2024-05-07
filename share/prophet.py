@@ -293,10 +293,10 @@ class Prophet(object):
     dif_rising_cross = False
     dif_falling_cross = False
     if dif_trend == 1:
-      if dif[0] > dem[0] and dif[dif_trend_num] < dem[dif_trend_num]:
+      if dif[0] > dem[0] and dif[dif_trend_num-1] < dem[dif_trend_num-1]:
         dif_rising_cross = True
     elif dif_trend == -1:
-      if dif[0] < dem[0] and dif[dif_trend_num] > dem[dif_trend_num]:
+      if dif[0] < dem[0] and dif[dif_trend_num-1] > dem[dif_trend_num-1]:
         dif_falling_cross = True
 
     # '金叉'和'死叉'判断
