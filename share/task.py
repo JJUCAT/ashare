@@ -70,14 +70,15 @@ def TaskBuyMonitor(realtime=False):
   short_ave = 12
   long_ave = 26
   dem_ave = 9
-  dif_trend_num = 5
+  dif_trend_num = 4
   osc_trend_num = 3  
   macdrising_stocks = prophet.FilterMACD(save_path, 40, short_ave, long_ave, dem_ave, dif_trend_num, osc_trend_num, 1)
 
   # K 线分析
   local_scale = 0.25 # 当天实体线对当天 K 线占比
-  global_scale = 0.02 # 当天实体线对收盘价占比
-  kanalyse_stocks = prophet.FilterKAnalyse(save_path, local_scale, global_scale, 1)
+  global_scale_min = 0.02 # 当天实体线对收盘价占比，锤头和射击之星的参考
+  global_scale_max = 0.05 # 当天实体线对收盘价占比，看涨吞噬和看跌吞噬的参考
+  kanalyse_stocks = prophet.FilterKAnalyse(save_path, local_scale, global_scale_min, global_scale_max, 1)
 
   # 换手率判断趋势是否成型
   turnover_flip = 2.0 # 换手率，单位 %，高换手率意味着趋势要翻转
@@ -261,9 +262,10 @@ def TimerTask():
   """  
 
   # 设置定时任务
-  schedule.every().day.at("09:35").do(TimerOnline)
+  schedule.every().day.at("09:25").do(TimerOnline)
+  schedule.every().day.at("09:45").do(TimerOnline)
   schedule.every().day.at("11:15").do(TimerOnline)
-  schedule.every().day.at("13:10").do(TimerOnline)
+  schedule.every().day.at("13:15").do(TimerOnline)
   schedule.every().day.at("14:45").do(TimerOnline)
   schedule.every().day.at("22:00").do(TimerOffline)
 

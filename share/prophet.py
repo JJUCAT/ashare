@@ -346,13 +346,14 @@ class Prophet(object):
     return stocks_code
 
 
-  def GetKAnalyse(self, file, scale_local, scale_global):
+  def GetKAnalyse(self, file, scale_local, scale_global_min, scale_global_max):
     """通过 K 线分析涨跌, 锤头和看涨吞噬认为上涨趋势，射击之星和看跌吞噬认为下跌趋势
 
     Args:
         file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
         scale_local (float): 实体线占当天比例
-        scale_global (float): 实体线占整体价格比例
+        scale_global_min (float): 实体线占整体价格比例，给锤头和射击之星参考
+        scale_global_max (float): 实体线占整体价格比例，给看涨吞噬和看跌吞噬参考
 
     Returns:
         int: 0@没有信号, 1@上涨趋势，买入信号, -1@下降趋势，卖出信号
@@ -392,7 +393,7 @@ class Prophet(object):
     final_trend = 0
     # 判断实体线是否合格
     global_scl = abs(today_entity)/today_price_end
-    if global_scl>abs(scale_global):
+    if global_scl>abs(scale_global_min):
       # print("[ka] global scale ok, limit %f, cur %f" % (scale_global, global_scl))
       local_scl = abs(today_entity)/abs(today_entirety)
       if local_scl>abs(scale_local): # 判断锤头和射击之星
@@ -404,22 +405,24 @@ class Prophet(object):
           final_trend=1
         elif today_entity < 0 and under_shadow_scale < 0.1 and abs(today_over_shadow) > 2*abs(today_entity):
           final_trend=-1
-      if yesterday_entity < 0 and today_entity > 0: # 判断看涨吞噬
-        if today_price_end > yesterday_price_start and today_price_start < yesterday_price_end:
-          final_trend=1
-      if yesterday_entity > 0 and today_entity < 0: # 判断看跌吞噬
-        if today_price_end < yesterday_price_start and today_price_start > yesterday_price_end:
-          final_trend=-1
+      if global_scl>abs(scale_global_max):
+        if yesterday_entity < 0 and today_entity > 0: # 判断看涨吞噬
+          if today_price_end > yesterday_price_start and today_price_start < yesterday_price_end:
+            final_trend=1
+        if yesterday_entity > 0 and today_entity < 0: # 判断看跌吞噬
+          if today_price_end < yesterday_price_start and today_price_start > yesterday_price_end:
+            final_trend=-1
     return final_trend
 
 
-  def FilterKAnalyse(self, data_path, scale_local, scale_global, trend=1):
+  def FilterKAnalyse(self, data_path, scale_local, scale_global_min, scale_global_max, trend=1):
     """筛选出 data_path 中 MACD 上涨趋势或下跌趋势的股票
 
     Args:
         file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
         scale_local (float): 实体线占当天比例
-        scale_global (float): 实体线占整体价格比例
+        scale_global_min (float): 实体线占整体价格比例，给锤头和射击之星参考
+        scale_global_max (float): 实体线占整体价格比例，给看涨吞噬和看跌吞噬参考
         trend (int): @-1: 筛选下跌趋势；@1:筛选上涨趋势
 
     Returns:
@@ -429,7 +432,7 @@ class Prophet(object):
 
     for root, dirs, files in os.walk(data_path):
       for file in files:
-        ka = self.GetKAnalyse(root+file, scale_local, scale_global)
+        ka = self.GetKAnalyse(root+file, scale_local, scale_global_min, scale_global_max)
         if ka * trend > 0:
             code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
             stocks_code.append(code)
