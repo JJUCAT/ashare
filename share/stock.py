@@ -300,12 +300,12 @@ class Stock(object):
     #   self.GetHotRank(hot_rank_path)
 
     # 1，3，5，10 天资金流向排行
-    daynum_list = [1] # [1, 3, 5, 10]
-    for daynum in daynum_list:
-      fund_flow_path = data_path + 'fund_flow_' + str(daynum) + '.csv'
-      file = pathlib.Path(fund_flow_path)
-      if not file.is_file():
-        self.GetFundFlow(fund_flow_path, daynum)
+    # daynum_list = [1] # [1, 3, 5, 10]
+    # for daynum in daynum_list:
+    #   fund_flow_path = data_path + 'fund_flow_' + str(daynum) + '.csv'
+    #   file = pathlib.Path(fund_flow_path)
+    #   if not file.is_file():
+    #     self.GetFundFlow(fund_flow_path, daynum)
 
     # 大盘资金流向历史数据
     # market_fund_flow_path = data_path + 'market_fund_flow.csv'
@@ -459,7 +459,7 @@ class Stock(object):
       break # 跳过 os.walk 对子目录 dirs 的遍历
 
 
-  def GetRecentStocks(self, csv_file, save_path, days, market_value):
+  def GetRecentStocks(self, csv_file, save_path, days, market_value, price_low, price_high):
     """获取 csv_path 文件内股票最近 days 天的数据
 
     Args:
@@ -467,13 +467,15 @@ class Stock(object):
         save_path (str): 保存路径
         days (int): 要查阅的天数
         market_value (float): 市值，单位亿
+        price_low (float): 价格下限，单位元
+        price_high (float): 价格上限，单位元
     """    
     csv_reader = csv.reader(open(csv_file))
     num = 0
 
     for row in csv_reader:
       # csv 中字符 '-' 表示空栅格
-      if row[3] == '-':
+      if row[3] == '-' or '':
         break
 
       if num == 0: # 第一行是项目标题
@@ -498,9 +500,21 @@ class Stock(object):
 
       code_index = 1
       name_index = 2
+      market_index = 17
+      price_index = 3
       code = row[code_index]
       name = row[name_index]
-      if (self.IsStockMarketValueGreaterThan(code, market_value)):
+      market = row[market_index]
+      price = row[price_index]
+      p = 0.0
+      try:
+        p = float(price)
+      except ValueError as err:
+        continue
+
+      if p < price_low or p > price_high:
+        continue
+      if float(market) >= market_value * 1.0e+8:
         num += 1
         stock_history_path = save_path + code + '_' + name + '.csv'
         self.GetStockHistory(stock_history_path, code, days)

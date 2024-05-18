@@ -14,6 +14,67 @@ from share.info import *
 import shutil
 from functools import reduce
 
+import json
+
+
+def TaskLoadConfigurations(config_path):
+  """加载参数
+
+  Returns:
+      dict: 参数字典
+  """  
+
+  # 加载配置参数
+  print('config path: %s' % config_path)
+  f = open(config_path)
+  json_context = f.read()
+  config_dict = json.loads(json_context)
+  print(config_dict)
+  return config_dict
+
+
+
+def TaskClearData(config_dict):
+  # 检查路径
+  data_path = config_dict['base_path']+config_dict['data_path']
+  rawdata_path = data_path+config_dict['rawdata_path']
+  historydata_path = rawdata_path+config_dict['historydata_path']
+  print('data path: %s' % data_path)
+  print('data rawdata_path: %s' % rawdata_path)
+  print('data historydata_path: %s' % historydata_path)
+
+  if not os.path.exists(data_path):
+    print('创建数据目录')
+    os.mkdir(data_path)
+  if os.path.exists(rawdata_path):
+    print('清空目录')
+    shutil.rmtree(rawdata_path)
+  os.mkdir(rawdata_path)
+  os.mkdir(historydata_path)
+
+
+
+def TaskPullData(config_dict):
+  """拉取数据
+
+  Args:
+      config_dict (dict): 配置参数
+  """  
+  stockslist_file = config_dict['base_path']+config_dict['data_path']+config_dict['rawdata_path']+config_dict['stockslist']
+  print('stocks list path: %s' % stockslist_file)
+
+  stock = Stock()
+  print('pull stocks list.')
+  stock.GetRealTime(stockslist_file)
+
+  days = config_dict['history_data_days']
+  market_value = config_dict['history_data_market']
+  price_low = config_dict['history_data_price_low']
+  price_high = config_dict['history_data_price_high']
+  historydata_path = config_dict['base_path']+config_dict['data_path']+config_dict['rawdata_path']+config_dict['historydata_path']
+  stock.GetRecentStocks(stockslist_file, historydata_path, days, market_value, price_low, price_high)
+
+
 
 def TaskBuyMonitor(realtime=False):
   """定时任务，买入信号
@@ -55,7 +116,7 @@ def TaskBuyMonitor(realtime=False):
   fund_file = csv_path + 'price_stock_' + str(rang) + '.csv'
   save_path = csv_path + reasonable_price_stocks_dir
   stock.GetRecentStocks(fund_file, save_path, days, market_value)
-
+  return
   #3 挑选股票
   short_days = 20 # 均价天数
   middle_days = 30

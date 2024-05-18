@@ -1,0 +1,12 @@
+{
+  "base_path":"/home/lmr/ws/ashare/",
+  "data_path":"data/",
+  "rawdata_path":"raw_data/",
+  "stockslist":"stockslist.csv",
+  "historydata_path":"history_data/",
+
+  "history_data_days":60,
+  "history_data_market":80.0,
+  "history_data_price_low": 10.0,
+  "history_data_price_high": 20.0
+}
