@@ -76,6 +76,31 @@ def TaskPullData(config_dict):
 
 
 
+def TaskAnalyse(config_dict):
+
+  prophet = Prophet()
+  historydata_path = config_dict['base_path']+config_dict['data_path']+config_dict['rawdata_path']+config_dict['historydata_path']
+
+  # macd 金叉买入判断
+  macd_config = config_dict['analysis']['macd']
+  short_days = macd_config['short_days']
+  long_days = macd_config['long_days']
+  dem_days = macd_config['dem_days']
+  dif_trend_num = macd_config['dif_trend_num']
+  osc_trend_num = macd_config['osc_trend_num'] 
+  macdrising_stocks = prophet.FilterMACD(historydata_path, 60, short_days, long_days, dem_days, dif_trend_num, osc_trend_num, 1)
+  print('筛选金叉股票共 %d 支。' % (len(macdrising_stocks)))
+
+
+
+
+
+
+
+
+
+
+
 def TaskBuyMonitor(realtime=False):
   """定时任务，买入信号
      爬取股市数据，整理后发送邮件
@@ -116,7 +141,7 @@ def TaskBuyMonitor(realtime=False):
   fund_file = csv_path + 'price_stock_' + str(rang) + '.csv'
   save_path = csv_path + reasonable_price_stocks_dir
   stock.GetRecentStocks(fund_file, save_path, days, market_value)
-  return
+
   #3 挑选股票
   short_days = 20 # 均价天数
   middle_days = 30

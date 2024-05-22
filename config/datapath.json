@@ -5,8 +5,20 @@
   "stockslist":"stockslist.csv",
   "historydata_path":"history_data/",
 
-  "history_data_days":60,
+  "history_data_days":90,
   "history_data_market":80.0,
   "history_data_price_low": 10.0,
-  "history_data_price_high": 20.0
+  "history_data_price_high": 20.0,
+
+  "analysis":{
+    "macd":{
+      "short_days":12,
+      "long_days":26,
+      "dem_days":9,
+      "dif_trend_num":4,
+      "osc_trend_num":3
+    }
+  }
 }
+
+

@@ -18,9 +18,9 @@ if __name__ == '__main__':
   config_dict = TaskLoadConfigurations(config_path) # 加载参数
   TaskClearData(config_dict) # 清除数据
   TaskPullData(config_dict) # 拉取数据
+  TaskAnalyse(config_dict) # 买卖信息
 
-
-
+  # ---------- 旧 ----------
   # TimerTask()
   # TaskBuyMonitor()
   # TaskSellMonitor()
