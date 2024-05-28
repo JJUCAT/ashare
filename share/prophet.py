@@ -9,25 +9,10 @@ import re
 import datetime
 
 
-
 class Prophet(object):
 
-  def __init__(self, realtime_file):
-    self.realtime_file = realtime_file
-    self.use_realtime = False # ak.stock_zh_a_hist 接口得到的股票历史数据带有当天的最新数据，所有该接口无用
+  def __init__(self):
     print('Prophet init.')
-
-  def UseRealtime(self, use):
-    self.use_realtime = False # ak.stock_zh_a_hist 接口得到的股票历史数据带有当天的最新数据，所有该接口无用
-
-  def GetRealtimeStock(self, code):
-    # print("realtime code is %s" % (code))
-    realtime_reader = csv.reader(open(self.realtime_file))
-    realtime_list = list(realtime_reader)
-    for i in range(len(realtime_list)):
-      if realtime_list[i][1] == code:
-        return realtime_list[i]
-    return
 
   def IsAveragePriceInTrend(self, file, average, rang, trend_num, ave_trend, cur_position):
     """判断股票是否低于最近的平均值，文件数据是按日期从远到近排列，需要反向遍历！
@@ -49,19 +34,6 @@ class Prophet(object):
     average_price_list = []
 
     code = file.split("_")[0][-6:] # 在 . 的位置切片，获取前面部分
-    rt_stock = self.GetRealtimeStock(code)
-    if self.use_realtime and len(rt_stock) > 0:
-      ave = 0.0
-      k = 1
-      ave += float(rt_stock[3])
-      for j in range(average-1):
-        if j >= len(revr_list)-1:
-          break
-        ave += float(revr_list[j][2])
-        k += 1
-      ave = ave / k
-      average_price_list.append(ave)
-
     for i in range(len(revr_list)):
       # 行首项目名
       if i == len(revr_list)-1:
@@ -86,8 +58,6 @@ class Prophet(object):
       average_price_list.append(ave)
 
     new_price = float(revr_list[0][2])
-    if self.use_realtime:
-      new_price = float(rt_stock[3])
 
     # 判断最近价格在最近平均值上下
     isPositionCondOk = False    
@@ -144,6 +114,42 @@ class Prophet(object):
     return stocks_code
 
 
+  def GetEMA(self, file, average, rang):
+    """计算股价 ema 值，从第一日开始计算起步，需要完整的历史数据
+
+    Args:
+        file (str): 股票文件，数据公式由 Stock 的 GetRecentStocks 提供
+        average (int): 平均价格天数
+        rang (int): 计算天数
+    Returns:
+        list: 移动平均股价，从最近到最远的日期排序
+    """   
+    csv_reader = csv.reader(open(file))
+    list_csv = list(csv_reader) # 转 list
+    num = len(list_csv)
+    start = num - rang
+    if start < 0:
+      start = 0
+    start += 1 # 文件行首是项目名
+
+    ema_list = []
+    den = average+1
+    mol = den-2
+    for i in range(rang):
+      if i+start >= len(list_csv):
+        break
+
+      ema = 0.0
+      if i == 0:
+        ema = float(list_csv[i+start][2])
+      elif i == 1:
+        ema = ema_list[0]+((float(list_csv[i+start][2])-ema_list[0])*2/den)
+      else:
+        ema = ema_list[i-1]*mol/den + float(list_csv[i+start][2])*2/den
+      ema_list.append(ema)
+    revr_ema_list = ema_list[::-1]
+    return revr_ema_list
+
   def GetAverage(self, file, average, rang):
     """计算股价均值，文件数据是按日期从远到近排列，需要反向遍历！
 
@@ -160,18 +166,6 @@ class Prophet(object):
     average_price_list = []
 
     code = file.split("_")[0][-6:] # 在 . 的位置切片，获取前面部分
-    rt_stock = self.GetRealtimeStock(code)
-    if self.use_realtime:
-      ave = 0.0
-      k = 1
-      ave += float(rt_stock[3])
-      for j in range(average-1):
-        if j >= len(revr_list)-1:
-          break
-        ave += float(revr_list[j][2])
-        k += 1
-      ave = ave / k
-      average_price_list.append(ave)
 
     for i in range(len(revr_list)):
       # 行首项目名
@@ -188,17 +182,21 @@ class Prophet(object):
 
       ave = 0.0
       k = 0
+      list_end = False
       for j in range(average):
         if i + j >= len(revr_list)-1:
+          list_end = True
           break
         ave += float(revr_list[i+j][2])
         k += 1
+      if list_end:
+        break
       ave = ave / k
       average_price_list.append(ave)
     return average_price_list
 
 
-  def GetMACD(self, file, rang, short_ave, long_ave, dem_ave, dif_trend_num ,osc_trend_num, strict=False):
+  def GetMACD(self, file, rang, short_ave, long_ave, dea_ave, dif_trend_num ,macd_trend_num, strict=False):
     """计算 MACD, 通过'金叉'和'死叉'判断买卖信号
 
     Args:
@@ -206,68 +204,73 @@ class Prophet(object):
         rang (int): 计算天数
         short_ave (int): 短线平均天数
         long_ave (int): 长线平均天数
-        dem_ave (int): dem 平均天数，拿多少个差离值 dif 来平均
+        dea_ave (int): dea 平均天数，拿多少个差离值 dif 来平均
         dif_trend_num (int): 持续 dif_trend_num 个均价才确认 dif 趋势
-        osc_trend_num (int): 持续 osc_trend_num 个均价才确认 osc 趋势
-        strict (bool): 是否严格执行，金叉要求 osc 为负，死叉要求 osc 为正
+        macd_trend_num (int): 持续 macd_trend_num 个均价才确认 macd 趋势
+        strict (bool): 是否严格执行，金叉要求 macd 为负，死叉要求 macd 为正
 
     Returns:
         int: 0@没有信号, 1@上涨趋势，买入信号, -1@下降趋势，卖出信号
     """    
     # 计算短线，长线均值
-    short_line = self.GetAverage(file, short_ave, rang) # 短线数据可能比长线多
-    long_line = self.GetAverage(file, long_ave, rang)
+    # short_line = self.GetAverage(file, short_ave, rang) # 短线数据可能比长线多
+    # long_line = self.GetAverage(file, long_ave, rang)
+    short_line = self.GetEMA(file, short_ave, rang) # 短线数据可能比长线多
+    long_line = self.GetEMA(file, long_ave, rang)
 
     # 差离值 dif = 短线均值 short - 长线均值 long
     dif=[]
     for i in range(len(long_line)):
       dif.append(short_line[i]-long_line[i])
+      # print('dif[%d]:%f' % (i, dif[i]))
     # print("short num %d, long num %d, dif num %d" % (len(short_line), len(long_line), len(dif)))
 
-    # 讯号线 dem/macd = dif 均值
-    dem=[]
+    # 讯号线 dea = dif 均值
+    dea=[]
     for i in range(len(dif)):
       ave = 0.0
       k = 0
-      for j in range(dem_ave):
+      for j in range(dea_ave):
         if i + j >= len(dif):
           break
         ave += dif[i+j]
         k += 1
       ave = ave / k
-      dem.append(ave)
-    # print("dif num %d, dem num %d" %  (len(dif), len(dem)))
+      dea.append(ave)
+      # print('dea[%d]:%f' % (i, dea[i]))
+    # print("dif num %d, dea num %d" %  (len(dif), len(dea)))
 
-    # osc = 差离值 dif - 讯号线 dem，osc 为正说明趋势上涨
-    # 均值天数越多，osc 滞后性越大
-    osc=[]
+    # macd = 差离值 dif - 讯号线 dea，macd 为正说明趋势上涨
+    # 均值天数越多，macd 滞后性越大
+    macd=[]
     for i in range(len(dif)):
-      osc.append(dif[i]-dem[i])
+      macd.append(dif[i]-dea[i])
+      # print('macd[%d]:%f' % (i, macd[i]))
 
-    # 下面是趋势判断， osc 和 dif&dem
-    # osc 上升/下降判断
+    # 下面是趋势判断， macd 和 dif&dea
+    # macd 上升/下降判断
     continue_count = 0
-    osc_orit=0 # 初始趋势
-    osc_trend = 0 # 趋势方向，0 没有趋势, 1 上涨趋势, -1 下降趋势
-    for i in range(len(osc)):
-      if i == len(osc)-2:
+    macd_orit=0 # 初始趋势
+    macd_trend = 0 # 趋势方向，0 没有趋势, 1 上涨趋势, -1 下降趋势
+    for i in range(len(macd)):
+      if i == len(macd)-2:
         break
-      step = osc[i] - osc[i+1]
+      step = macd[i] - macd[i+1]
       # 趋势方向
       if i == 0:
         if step < 0:
-          osc_orit = -1
+          macd_orit = -1
         elif step > 0:
-          osc_orit = 1
-      if step * osc_orit > 0: # 趋势相同
+          macd_orit = 1
+      if step * macd_orit > 0: # 趋势相同
         continue_count += 1
-        if continue_count >= osc_trend_num:
-          osc_trend = osc_orit
+        if continue_count >= macd_trend_num:
+          macd_trend = macd_orit
           break
       else: # 没有趋势，结束
         break
 
-    # 判断 dif 由下到上穿过 dem 还是 dif 由上到下穿过 dem
+    # 判断 dif 由下到上穿过 dea 还是 dif 由上到下穿过 dea
     current_rising = 0
     dif_rising_count = 0
     continue_count = 0
@@ -293,28 +296,28 @@ class Prophet(object):
     dif_rising_cross = False
     dif_falling_cross = False
     if dif_trend == 1:
-      if dif[0] > dem[0] and dif[dif_trend_num-1] < dem[dif_trend_num-1]:
+      if dif[0] > dea[0] and dif[dif_trend_num-1] < dea[dif_trend_num-1]:
         dif_rising_cross = True
     elif dif_trend == -1:
-      if dif[0] < dem[0] and dif[dif_trend_num-1] > dem[dif_trend_num-1]:
+      if dif[0] < dea[0] and dif[dif_trend_num-1] > dea[dif_trend_num-1]:
         dif_falling_cross = True
 
     # '金叉'和'死叉'判断
     final_trend = 0
     if strict == True:
-      if osc_trend > 0 and osc[0]<0 and dif_rising_cross == True:
+      if macd_trend > 0 and macd[0]<0 and dif_rising_cross == True:
         final_trend = 1
-      elif osc_trend < 0 and osc[0]>0 and dif_falling_cross == True:
+      elif macd_trend < 0 and macd[0]>0 and dif_falling_cross == True:
         final_trend = -1
     else:
-      if osc_trend > 0 and dif_rising_cross == True:
+      if macd_trend > 0 and dif_rising_cross == True:
         final_trend = 1
-      elif osc_trend < 0 and dif_falling_cross == True:
+      elif macd_trend < 0 and dif_falling_cross == True:
         final_trend = -1
     return final_trend
 
 
-  def FilterMACD(self, data_path, rang, short_ave, long_ave, dem_ave, dif_trend_num, osc_trend_num, trend=1):
+  def FilterMACD(self, data_path, rang, short_ave, long_ave, dea_ave, dif_trend_num, macd_trend_num, trend=1):
     """筛选出 data_path 中 MACD 上涨趋势或下跌趋势的股票
 
     Args:
@@ -322,9 +325,9 @@ class Prophet(object):
         rang (int): 计算天数
         short_ave (int): 短线平均天数
         long_ave (int): 长线平均天数
-        dem_ave (int): dem 平均天数，拿多少个差离值 dif 来平均
+        dea_ave (int): dea 平均天数，拿多少个差离值 dif 来平均
         dif_trend_num (int): 持续 dif_trend_num 个均价才确认 dif 趋势
-        osc_trend_num (int): 持续 osc_trend_num 个均价才确认 osc 趋势
+        macd_trend_num (int): 持续 macd_trend_num 个均价才确认 macd 趋势
         trend (int): @-1: 筛选下跌趋势，“死叉”股票；@1:筛选上涨趋势，“金叉”股票
 
     Returns:
@@ -334,7 +337,7 @@ class Prophet(object):
 
     for root, dirs, files in os.walk(data_path):
       for file in files:
-        cross = self.GetMACD(root+file, rang, short_ave, long_ave, dem_ave, dif_trend_num, osc_trend_num)
+        cross = self.GetMACD(root+file, rang, short_ave, long_ave, dea_ave, dif_trend_num, macd_trend_num)
         if cross * trend > 0:
             code = file.split(".")[0] # 在 . 的位置切片，获取前面部分
             stocks_code.append(code)
@@ -369,15 +372,6 @@ class Prophet(object):
     today_price_low = float(today_price[4]) # 最低价
     yesterday_price_start = float(yesterday_price[1])
     yesterday_price_end = float(yesterday_price[2])
-    if self.use_realtime:
-      code = file.split("_")[0][-6:] # 在 . 的位置切片，获取前面部分
-      rt_stock = self.GetRealtimeStock(code)
-      yesterday_price_start = today_price_start
-      yesterday_price_end = today_price_end
-      today_price_start = float(rt_stock[11])
-      today_price_end = float(rt_stock[3])
-      today_price_high = float(rt_stock[9])
-      today_price_low = float(rt_stock[10])
     today_entity = today_price_end-today_price_start # 实体线=收盘价-开盘价
     yesterday_entity = yesterday_price_end-yesterday_price_start
     today_entirety = today_price_high-today_price_low # 整体线=最高价-最低价
@@ -461,12 +455,6 @@ class Prophet(object):
     revr_list = list_csv[::-1]
     ave = 0.0
     k = 0
-
-    if self.use_realtime:
-      k += 1
-      code = file.split("_")[0][-6:] # 在 . 的位置切片，获取前面部分
-      rt_stock = self.GetRealtimeStock(code)      
-      ave += float(rt_stock[14])
 
     for i in range(len(revr_list)):
       # 行首项目名

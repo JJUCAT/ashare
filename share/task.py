@@ -90,8 +90,8 @@ def TaskAnalyse(config_dict):
   osc_trend_num = macd_config['osc_trend_num'] 
   macdrising_stocks = prophet.FilterMACD(historydata_path, 60, short_days, long_days, dem_days, dif_trend_num, osc_trend_num, 1)
   print('筛选金叉股票共 %d 支。' % (len(macdrising_stocks)))
-
-
+  for stock in macdrising_stocks:
+    print(stock)
 
 
 
